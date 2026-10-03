@@ -1,0 +1,78 @@
+name: عالم التعلم - نشر تلقائي
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # كل يوم 10:00 UTC (11:00 بتوقيت الجزائر) -> Short
+    - cron: "0 14 * * 5"   # كل جمعة 14:00 UTC -> فيديو طويل
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "نوع الفيديو"
+        type: choice
+        options: [short, long]
+        default: short
+      dry_run:
+        description: "تجربة بدون رفع (1) أو رفع حقيقي (0)"
+        default: "1"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: channel-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: تثبيت الخطوط والأدوات
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-color-emoji libraqm0 libfribidi0
+          pip install -r requirements.txt
+
+      - name: تحديد نوع الفيديو
+        id: kind
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "kind=${{ github.event.inputs.kind }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 14 * * 5" ]; then
+            echo "kind=long" >> $GITHUB_OUTPUT
+          else
+            echo "kind=short" >> $GITHUB_OUTPUT
+          fi
+
+      - name: إنتاج ورفع الفيديو
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || '0' }}
+          PRIVACY: ${{ vars.PRIVACY || 'public' }}
+        run: python main.py ${{ steps.kind.outputs.kind }}
+
+      - name: حفظ الفيديو التجريبي
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video
+          path: output/*.mp4
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: حفظ سجل الدروس (لعدم التكرار)
+        run: |
+          git config user.name "learning-world-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state/history.json || true
+          git diff --cached --quiet || (git commit -m "تحديث سجل الدروس" && git push)
