@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import asyncio
 import datetime as dt
 from pathlib import Path
@@ -89,26 +90,61 @@ def gemini_lesson(cat, age, n, history):
     if not key:
         return None
     prompt = PROMPT.format(age=age, cat=cat, n=n, prev=" | ".join(history["titles"][-25:]) or "لا يوجد")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={key}"
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9}}
-    for attempt in range(3):
-        try:
-            r = requests.post(url, json=body, timeout=90)
-            r.raise_for_status()
-            text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            data = json.loads(text)
-            if isinstance(data, list):
-                data = data[0]
-            scenes = [s for s in data["scenes"] if s.get("ar") and s.get("en")]
-            if len(scenes) < 2:
-                raise ValueError("مشاهد قليلة")
-            data["scenes"] = scenes
-            data["category"], data["age"] = cat, age
-            return data
-        except Exception as e:  # noqa
-            print(f"[gemini] محاولة {attempt + 1} فشلت: {e}")
+    for model in gemini_models(key)[:6]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        for attempt in range(2):
+            try:
+                r = requests.post(url, json=body, timeout=90)
+                if r.status_code in (404, 400, 403):  # النموذج غير متاح لهذا المفتاح: جرّب التالي
+                    print(f"[gemini] النموذج {model} غير متاح ({r.status_code})")
+                    break
+                r.raise_for_status()
+                text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                data = json.loads(text)
+                if isinstance(data, list):
+                    data = data[0]
+                scenes = [s for s in data["scenes"] if s.get("ar") and s.get("en")]
+                if len(scenes) < 2:
+                    raise ValueError("مشاهد قليلة")
+                data["scenes"] = scenes
+                data["category"], data["age"] = cat, age
+                print(f"[gemini] تم باستخدام النموذج {model}")
+                return data
+            except Exception as e:  # noqa
+                print(f"[gemini] {model} محاولة {attempt + 1} فشلت: {str(e)[:160]}")
+                time.sleep(4)
     return None
+
+
+def gemini_models(key):
+    """النماذج المرشّحة بالترتيب: المحدد يدوياً، ثم أسماء شائعة، ثم ما تعرضه Google لمفتاحك."""
+    names = []
+    if os.getenv("GEMINI_MODEL"):
+        names.append(os.getenv("GEMINI_MODEL"))
+    names += ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash-001"]
+    try:
+        r = requests.get("https://generativelanguage.googleapis.com/v1beta/models",
+                         params={"key": key, "pageSize": 200}, timeout=30)
+        found = []
+        for m in r.json().get("models", []):
+            n = m.get("name", "").split("/")[-1]
+            if ("generateContent" in m.get("supportedGenerationMethods", []) and "flash" in n
+                    and not any(x in n for x in ("image", "tts", "live", "audio", "embed", "lite"))):
+                found.append(n)
+        stable = sorted([n for n in found if "preview" not in n and "exp" not in n], reverse=True)
+        found = stable + sorted([n for n in found if n not in stable], reverse=True)
+        print("[gemini] نماذج متاحة:", ", ".join(found[:8]) or "لا شيء")
+        names += found
+    except Exception as e:  # noqa
+        print(f"[gemini] تعذر جلب قائمة النماذج: {str(e)[:120]}")
+    seen, out = set(), []
+    for n in names:
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
 
 
 def fallback_lesson(history):
