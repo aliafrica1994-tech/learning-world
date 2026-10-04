@@ -79,8 +79,9 @@ PROMPT = """أنت معلم أطفال محترف للوطن العربي. اك�
 - {n} مشاهد، كل مشهد فكرة واحدة واضحة مع مثال محسوس.
 - محتوى آمن تماماً للأطفال، دون أي عنف أو مخاوف أو إشارات تجارية.
 - لا تكرر هذه العناوين السابقة: {prev}
+- لكل جملة عربية أضف الحقل "ar_tts": الجملة نفسها حرفياً لكن مشكولة بالكامل (فتحة وضمة وكسرة وسكون وشدة وتنوين) على أصح قواعد الفصحى، لأنها ستُقرأ بصوت آلي. وكذلك "title_ar_tts" للعنوان.
 - أرجع JSON فقط بهذا الشكل بالضبط:
-{{"title_ar": "...", "title_en": "...", "scenes": [{{"ar": "...", "en": "...", "emoji": "إيموجي واحد", "visual": "English prompt to draw a cute simple child-friendly cartoon picture for this scene"}}]}}"""
+{{"title_ar": "...", "title_ar_tts": "...", "title_en": "...", "scenes": [{{"ar": "...", "ar_tts": "...", "en": "...", "emoji": "إيموجي واحد", "visual": "English prompt to draw a cute simple child-friendly cartoon picture for this scene"}}]}}"""
 
 
 def gemini_lesson(cat, age, n, history):
@@ -282,7 +283,8 @@ def make_audio(scene, idx):
         silence(ar, max(2.0, len(scene["ar"]) * 0.07))
         silence(en, max(2.0, len(scene["en"]) * 0.06))
     else:
-        asyncio.run(_tts(scene["ar"], AR_VOICE, ar))
+        # النص المشكول للصوت فقط؛ على الشاشة يظهر النص العادي
+        asyncio.run(_tts(scene.get("ar_tts") or scene["ar"], AR_VOICE, ar))
         asyncio.run(_tts(scene["en"], EN_VOICE, en))
     gap = OUT / "gap.mp3"
     if not gap.exists():
@@ -327,19 +329,26 @@ def build_video(lessons, size, kind):
         idx += 1
 
     first = lessons[0]
+    def tt(ls):  # عنوان مشكول للصوت إن وُجد
+        return ls.get("title_ar_tts") or ls["title_ar"]
+
     add({"ar": f"مرحباً يا أصدقاء! درسنا اليوم: {first['title_ar']}",
+         "ar_tts": f"مَرْحَبًا يَا أَصْدِقَاءُ! دَرْسُنَا اليَوْمَ: {tt(first)}",
          "en": f"Hello friends! Today: {first['title_en']}", "emoji": "👋"}, "title")
     for i, ls in enumerate(lessons):
         if kind == "long" and i > 0:
-            add({"ar": f"الدرس التالي: {ls['title_ar']}", "en": f"Next lesson: {ls['title_en']}",
-                 "emoji": "➡️"}, "title")
+            add({"ar": f"الدرس التالي: {ls['title_ar']}",
+                 "ar_tts": f"الدَّرْسُ التَّالِي: {tt(ls)}",
+                 "en": f"Next lesson: {ls['title_en']}", "emoji": "➡️"}, "title")
         for sc in ls["scenes"]:
             add(sc)
         if kind == "long":  # مراجعة سريعة بعد كل درس
             add({"ar": "أحسنتم! هل تذكرون ما تعلمناه؟ فكروا قليلاً.",
+                 "ar_tts": "أَحْسَنْتُمْ! هَلْ تَتَذَكَّرُونَ مَا تَعَلَّمْنَاهُ؟ فَكِّرُوا قَلِيلًا.",
                  "en": "Well done! Do you remember what we learned? Think for a moment.",
                  "emoji": "🤔"}, "title")
     add({"ar": "أحسنتم يا أبطال! اشتركوا في القناة لنتعلم معاً كل يوم.",
+         "ar_tts": "أَحْسَنْتُمْ يَا أَبْطَالُ! اشْتَرِكُوا فِي القَنَاةِ لِنَتَعَلَّمَ مَعًا كُلَّ يَوْمٍ.",
          "en": "Great job, heroes! Subscribe to learn with us every day.", "emoji": "🌟"}, "title")
     out = OUT / f"{kind}.mp4"
     concat(clips, out)
