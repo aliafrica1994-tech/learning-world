@@ -92,7 +92,7 @@ def gemini_lesson(cat, age, n, history):
     prompt = PROMPT.format(age=age, cat=cat, n=n, prev=" | ".join(history["titles"][-25:]) or "لا يوجد")
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9}}
-    for model in gemini_models(key)[:6]:
+    for model in gemini_models(key)[:8]:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
         for attempt in range(2):
             try:
@@ -113,8 +113,10 @@ def gemini_lesson(cat, age, n, history):
                 print(f"[gemini] تم باستخدام النموذج {model}")
                 return data
             except Exception as e:  # noqa
-                print(f"[gemini] {model} محاولة {attempt + 1} فشلت: {str(e)[:160]}")
-                time.sleep(4)
+                # لا نطبع نص الخطأ لأنه يتضمن الرابط والمفتاح؛ نكتفي بنوعه ورمز الحالة
+                code = getattr(getattr(e, "response", None), "status_code", "")
+                print(f"[gemini] {model} محاولة {attempt + 1} فشلت: {type(e).__name__} {code}")
+                time.sleep(6)
     return None
 
 
@@ -138,7 +140,7 @@ def gemini_models(key):
         print("[gemini] نماذج متاحة:", ", ".join(found[:8]) or "لا شيء")
         names += found
     except Exception as e:  # noqa
-        print(f"[gemini] تعذر جلب قائمة النماذج: {str(e)[:120]}")
+        print(f"[gemini] تعذر جلب قائمة النماذج: {type(e).__name__}")
     seen, out = set(), []
     for n in names:
         if n not in seen:
