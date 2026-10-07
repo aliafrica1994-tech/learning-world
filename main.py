@@ -233,64 +233,155 @@ def emoji_image(ch, size):
         return None
 
 
-# ---------------------------------------------------------------- الصور
-def fetch_image(visual, size, seed):
-    """صورة كرتونية مجانية من Pollinations؛ تُرجع None عند الفشل."""
-    prompt = (f"cute colorful flat cartoon illustration for small children, {visual}, "
-              "simple bright background, friendly, no text, no letters")
-    url = ("https://image.pollinations.ai/prompt/" + requests.utils.quote(prompt) +
-           f"?width={size[0]}&height={size[1]}&nologo=true&seed={seed}")
-    try:
-        r = requests.get(url, timeout=60)
-        if r.ok and r.headers.get("content-type", "").startswith("image"):
-            tmp = OUT / f"dl_{seed}.img"
-            tmp.write_bytes(r.content)
-            im = Image.open(tmp).convert("RGB")
-            return im.resize(size, Image.LANCZOS)
-    except Exception as e:  # noqa
-        print(f"[image] فشل: {e}")
+# ---------------------------------------------------------------- الصور والتصميم
+PALETTES = [  # (أعلى، أسفل، لون مميز)
+    ((255, 214, 102), (255, 150, 120), (214, 70, 60)),
+    ((140, 210, 255), (120, 150, 255), (40, 90, 200)),
+    ((170, 235, 170), (90, 200, 170), (20, 130, 100)),
+    ((255, 190, 220), (200, 150, 255), (150, 60, 190)),
+    ((255, 225, 150), (140, 220, 200), (30, 140, 130)),
+    ((190, 200, 255), (255, 180, 200), (190, 70, 120)),
+]
+STYLE = ("cute 3D cartoon illustration for small children, Pixar style, soft lighting, "
+         "vibrant pastel colors, centered subject, clean simple background, high quality, "
+         "no text, no letters, no watermark")
+
+
+def fetch_image(visual, seed):
+    """صورة مربعة 1024 من Pollinations مع إعادة المحاولة؛ None عند الفشل."""
+    prompt = f"{visual}, {STYLE}"
+    for attempt in range(3):
+        url = ("https://image.pollinations.ai/prompt/" + requests.utils.quote(prompt) +
+               f"?width=1024&height=1024&model=flux&nologo=true&enhance=true&seed={seed + attempt * 7}")
+        try:
+            r = requests.get(url, timeout=90)
+            if r.ok and r.headers.get("content-type", "").startswith("image") and len(r.content) > 20000:
+                tmp = OUT / f"dl_{seed}.img"
+                tmp.write_bytes(r.content)
+                return Image.open(tmp).convert("RGB")
+            print(f"[image] رمز {r.status_code} (محاولة {attempt + 1})")
+        except Exception as e:  # noqa
+            print(f"[image] فشل: {type(e).__name__} (محاولة {attempt + 1})")
+        time.sleep(5)
     return None
 
 
-def make_card(scene, size, idx, kind="scene", title=None):
-    """يبني إطاراً كاملاً: خلفية + صورة/إيموجي + نص عربي وإنجليزي."""
+def gradient(size, top, bottom):
+    W, H = size
+    col = Image.new("RGB", (1, H))
+    for y in range(H):
+        k = y / max(1, H - 1)
+        col.putpixel((0, y), tuple(int(top[i] * (1 - k) + bottom[i] * k) for i in range(3)))
+    return col.resize((W, H))
+
+
+def rounded_mask(size, radius):
+    m = Image.new("L", size, 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, size[0] - 1, size[1] - 1], radius=radius, fill=255)
+    return m
+
+
+def fit_text(draw, text, font_paths, max_w, max_h, start, minimum, arabic):
+    """أكبر خط يجعل النص كله داخل المربع."""
+    size = start
+    while size >= minimum:
+        f = pick_font(font_paths, size)
+        lines = wrap(draw, text, f, max_w, arabic)
+        if len(lines) * size * 1.4 <= max_h:
+            return f, lines
+        size -= 4
+    f = pick_font(font_paths, minimum)
+    return f, wrap(draw, text, f, max_w, arabic)
+
+
+def make_card(scene, size, idx, kind="scene"):
+    """إطار كامل: خلفية متدرجة + صورة مدوّرة (أو إيموجي) + لوحة نص عربي/إنجليزي."""
+    import math
     W, H = size
     vertical = H > W
-    bg = BG_COLORS[idx % len(BG_COLORS)]
-    im = None
-    if kind == "scene" and os.getenv("NO_IMAGES") != "1":
-        im = fetch_image(scene.get("visual", "cute smiling cartoon"), (W, H), random.randint(1, 10**6))
-    if im is None:
-        im = Image.new("RGB", size, bg)
-        d = ImageDraw.Draw(im)
-        for i in range(H):  # تدرج لطيف
-            k = i / H
-            d.line([(0, i), (W, i)], fill=tuple(int(c * (1 - 0.25 * k)) for c in bg))
-        em = emoji_image(scene.get("emoji", "⭐"), int(W * (0.6 if vertical else 0.3)))
-        if em:
-            im.paste(em, ((W - em.width) // 2, int(H * (0.18 if vertical else 0.12))), em)
+    top, bottom, accent = PALETTES[idx % len(PALETTES)]
+    im = gradient(size, top, bottom).convert("RGBA")
+    rnd = random.Random(idx * 31 + 7)
+    deco = Image.new("RGBA", size, (0, 0, 0, 0))
+    dd = ImageDraw.Draw(deco)
+    for _ in range(14):  # فقاعات زخرفية
+        r = rnd.randint(int(W * 0.02), int(W * 0.07))
+        x, y = rnd.randint(0, W), rnd.randint(0, H)
+        dd.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, rnd.randint(40, 90)))
+    im = Image.alpha_composite(im, deco)
 
-    d = ImageDraw.Draw(im, "RGBA")
-    # شريط النص السفلي
-    bar_h = int(H * (0.34 if vertical else 0.36))
-    d.rectangle([0, H - bar_h, W, H], fill=(20, 30, 70, 205))
-    f_ar = pick_font(FONT_AR_CANDIDATES, int(W * (0.075 if vertical else 0.042)))
-    f_en = pick_font(FONT_EN_CANDIDATES, int(W * (0.050 if vertical else 0.029)))
-    pad = int(W * 0.07)
-    y = H - bar_h + int(bar_h * 0.08)
-    ar_lines = wrap(d, scene["ar"], f_ar, W - 2 * pad, True)
-    y = draw_lines(d, ar_lines, f_ar, W / 2, y, True, (255, 236, 120))
-    en_lines = wrap(d, scene["en"], f_en, W - 2 * pad, False)
-    draw_lines(d, en_lines, f_en, W / 2, y + 6, False, (255, 255, 255))
-    # اسم القناة أعلى الصورة
-    f_ch = pick_font(FONT_AR_CANDIDATES, int(W * (0.045 if vertical else 0.027)))
-    tag = ar_text(CHANNEL_AR) + "  |  " + CHANNEL_EN
-    w = d.textlength(tag, font=f_ch)
-    d.rounded_rectangle([W / 2 - w / 2 - 20, 30, W / 2 + w / 2 + 20, 30 + f_ch.size * 1.6],
-                        radius=24, fill=(255, 255, 255, 190))
-    d.text((W / 2 - w / 2, 30 + f_ch.size * 0.2), tag, font=f_ch, fill=(30, 40, 90))
+    pad = int(W * 0.05)
+    # رأس القناة
+    f_ch = pick_font(FONT_AR_CANDIDATES, int(min(W, H) * 0.045))
+    tag = ar_text(CHANNEL_AR) + "  •  " + CHANNEL_EN
+    d = ImageDraw.Draw(im)
+    tw = d.textlength(tag, font=f_ch)
+    chip_h = int(f_ch.size * 1.9)
+    chip = [W / 2 - tw / 2 - 36, pad, W / 2 + tw / 2 + 36, pad + chip_h]
+    d.rounded_rectangle(chip, radius=chip_h // 2, fill=(255, 255, 255, 235))
+    d.text((W / 2 - tw / 2, pad + chip_h * 0.17), tag, font=f_ch, fill=accent)
+    head_b = pad + chip_h + int(pad * 0.7)
+
+    if vertical:
+        box = (pad, head_b, W - pad, head_b + int(H * 0.44))
+        panel = (pad, box[3] + int(pad * 0.7), W - pad, H - pad)
+    else:
+        box_w = int(W * 0.46)
+        box = (pad, head_b, pad + box_w, H - pad)
+        panel = (box[2] + pad, head_b, W - pad, H - pad)
+    bw, bh = box[2] - box[0], box[3] - box[1]
+
+    # الصورة أو الإيموجي
+    pic = None
+    if kind == "scene" and os.getenv("NO_IMAGES") != "1":
+        raw = fetch_image(scene.get("visual", "a happy smiling cartoon child"), rnd.randint(1, 10**6))
+        if raw is not None:
+            from PIL import ImageOps, ImageFilter
+            pic = ImageOps.fit(raw, (bw, bh), Image.LANCZOS).filter(
+                ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=3)).convert("RGBA")
+    if pic is None:
+        pic = Image.new("RGBA", (bw, bh), (255, 255, 255, 215))
+        pd = ImageDraw.Draw(pic)
+        cx, cy, R = bw // 2, bh // 2, int(min(bw, bh) * 0.42)
+        pd.ellipse([cx - R, cy - R, cx + R, cy + R], fill=tuple(list(top) + [255]))
+        em = emoji_image(scene.get("emoji", "⭐"), int(R * 1.5))
+        if em:
+            pic.paste(em, (cx - em.width // 2, cy - em.height // 2), em)
+
+    radius = int(min(bw, bh) * 0.07)
+    shadow = Image.new("RGBA", size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle([box[0] + 8, box[1] + 14, box[2] + 8, box[3] + 14],
+                                             radius=radius, fill=(0, 0, 0, 90))
+    from PIL import ImageFilter as _IF
+    im = Image.alpha_composite(im, shadow.filter(_IF.GaussianBlur(14)))
+    frame = Image.new("RGBA", (bw + 24, bh + 24), (255, 255, 255, 255))
+    im.paste(frame, (box[0] - 12, box[1] - 12), rounded_mask(frame.size, radius + 8))
+    im.paste(pic, (box[0], box[1]), rounded_mask((bw, bh), radius))
+
+    # لوحة النص
+    d = ImageDraw.Draw(im)
+    pw, ph = panel[2] - panel[0], panel[3] - panel[1]
+    d.rounded_rectangle([panel[0] + 6, panel[1] + 10, panel[2] + 6, panel[3] + 10],
+                        radius=int(pad * 0.9), fill=(0, 0, 0, 55))
+    d.rounded_rectangle(panel, radius=int(pad * 0.9), fill=(255, 255, 255, 245),
+                        outline=accent, width=6)
+    inner_w, inner_h = pw - 2 * int(pad * 0.8), ph - 2 * int(pad * 0.6)
+    base = min(W, H)
+    f_ar, ar_lines = fit_text(d, scene["ar"], FONT_AR_CANDIDATES, inner_w, inner_h * 0.62,
+                              int(base * (0.085 if vertical else 0.075)), 30, True)
+    f_en, en_lines = fit_text(d, scene["en"], FONT_EN_CANDIDATES, inner_w, inner_h * 0.34,
+                              int(base * 0.05), 22, False)
+    ar_h = len(ar_lines) * f_ar.size * 1.35
+    en_h = len(en_lines) * f_en.size * 1.35
+    y = panel[1] + (ph - (ar_h + en_h + 18)) / 2
+    cx = (panel[0] + panel[2]) / 2
+    y = draw_lines(d, ar_lines, f_ar, cx, y, True, (30, 40, 100), stroke=(255, 255, 255))
+    # فاصل صغير
+    d.rounded_rectangle([cx - 60, y + 2, cx + 60, y + 8], radius=3, fill=accent)
+    draw_lines(d, en_lines, f_en, cx, y + 18, False, accent, stroke=(255, 255, 255))
+
     path = OUT / f"card_{idx:03d}.png"
-    im.save(path)
+    im.convert("RGB").save(path)
     return path
 
 
@@ -341,10 +432,10 @@ def make_clip(card, audio, size, idx, fps=24):
     d = duration(audio)
     frames = int(d * fps) + 1
     # حركة تكبير خفيفة لإبقاء انتباه الطفل
-    vf = (f"scale={W * 5 // 4}:{H * 5 // 4},zoompan=z='min(zoom+0.0006,1.12)':d={frames}:"
+    vf = (f"scale={W * 3 // 2}:{H * 3 // 2}:flags=lanczos,zoompan=z='min(zoom+0.0005,1.10)':d={frames}:"
           f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={fps},format=yuv420p")
     sh(["ffmpeg", "-y", "-loop", "1", "-i", str(card), "-i", str(audio), "-vf", vf,
-        "-t", f"{d:.2f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+        "-t", f"{d:.2f}", "-c:v", "libx264", "-preset", "faster", "-crf", "19",
         "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", "-shortest", str(out)])
     return out
 
@@ -435,6 +526,55 @@ def upload(video, title, description, tags, thumb=None):
     return vid
 
 
+
+# ---------------------------------------------------------------- السيو
+CAT_KEYWORDS = {
+    "الحروف": (["حروف", "الحروف العربية", "تعليم الحروف", "Arabic alphabet", "learn Arabic letters"], "#الحروف_العربية"),
+    "الأرقام": (["أرقام", "تعليم العد", "العد للاطفال", "counting for kids", "learn numbers"], "#الأرقام"),
+    "الألوان": (["ألوان", "تعليم الألوان", "colors for kids", "learn colors"], "#الألوان"),
+    "الحيوانات": (["حيوانات", "أصوات الحيوانات", "animals for kids", "animal sounds"], "#الحيوانات"),
+    "الأشكال": (["أشكال", "الأشكال الهندسية", "shapes for kids", "learn shapes"], "#الأشكال"),
+    "القيم": (["قيم وأخلاق", "تربية الأطفال", "good manners for kids", "kids values"], "#قيم_وأخلاق"),
+    "العلوم": (["علوم للأطفال", "تجارب علمية", "science for kids", "kids science"], "#علوم_الأطفال"),
+}
+BASE_TAGS = ["تعليم الأطفال", "تعلم العربية", "عالم التعلم", "Learning World", "Arabic for kids",
+             "kids learning", "learn arabic", "learn english", "أطفال", "فيديو تعليمي للأطفال",
+             "تعليم الأطفال العربية والانجليزية", "روضة", "ما قبل المدرسة", "educational videos for kids"]
+
+
+def make_seo(lessons, kind):
+    first = lessons[0]
+    cat = first.get("category", "")
+    kw, cat_hash = CAT_KEYWORDS.get(cat, ([], "#تعليم"))
+    age = first.get("age", "5-8")
+    if kind == "short":
+        title = f"{first['title_ar']} | {first['title_en']} - تعليم الأطفال #Shorts"
+        if len(title) > 98:
+            title = f"{first['title_ar']} | {first['title_en']} #Shorts"
+    else:
+        names = " + ".join(l["title_ar"] for l in lessons[:3])
+        title = f"{names} | دروس للأطفال Kids Learning"
+        if len(title) > 98:
+            title = f"دروس للأطفال: {lessons[0]['title_ar']} وأكثر | Kids Learning"
+    lines = "\n".join(f"• {l['title_ar']} — {l['title_en']}" for l in lessons)
+    desc = (f"{first['title_ar']} — {first['title_en']}\n"
+            f"فيديو تعليمي للأطفال من {age.replace('-', ' إلى ')} سنوات بالعربية الفصحى والإنجليزية: "
+            f"{'، '.join(kw[:3]) if kw else 'تعليم الأطفال'}.\n"
+            f"Educational video for kids aged {age} in Arabic and English.\n\n"
+            f"📚 في هذا الفيديو / In this video:\n{lines}\n\n"
+            "🔔 اشترك في قناة عالم التعلم ليصلك درس جديد كل يوم، وفيديو طويل كل أسبوع.\n"
+            "Subscribe to Learning World for a new lesson every day!\n\n"
+            "🎓 شاهد المزيد: فيديوهات الحروف والأرقام والألوان والحيوانات والعلوم والقيم.\n\n"
+            "ملاحظة: الصوت والصور مولّدة بالذكاء الاصطناعي. / Voice and images are AI-generated.\n\n"
+            f"#تعليم_الأطفال {cat_hash} #عالم_التعلم #KidsLearning #LearnArabic")
+    tags = []
+    for t in kw + [first["title_ar"], first["title_en"]] + BASE_TAGS:
+        if t not in tags:
+            tags.append(t)
+    while sum(len(t) + 1 for t in tags) > 480:
+        tags.pop()
+    return title, desc, tags
+
 # ---------------------------------------------------------------- التشغيل
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "short"
@@ -463,18 +603,7 @@ def main():
     print(f"الفيديو جاهز: {video} ({total:.0f} ثانية)")
 
     first = lessons[0]
-    if kind == "short":
-        title = f"{first['title_ar']} | {first['title_en']} #Shorts"
-    else:
-        names = " + ".join(l["title_ar"] for l in lessons[:3])
-        title = f"دروس للأطفال: {names} | Kids Learning"
-    desc = ("فيديو تعليمي للأطفال من 5 إلى 8 سنوات بالعربية الفصحى والإنجليزية.\n"
-            "Educational video for kids aged 5-8 in Arabic and English.\n\n"
-            + "\n".join(f"• {l['title_ar']} — {l['title_en']}" for l in lessons) +
-            "\n\nالصوت والصور مولّدة بالذكاء الاصطناعي. / Voice and images are AI-generated.\n"
-            "#تعليم_الأطفال #عالم_التعلم #KidsLearning #Arabic")
-    tags = ["تعليم الأطفال", "تعلم العربية", "Arabic for kids", "kids learning",
-            "عالم التعلم", "أطفال", "تعليم", "learn arabic", "learn english"]
+    title, desc, tags = make_seo(lessons, kind)
 
     if os.getenv("DRY_RUN") == "1" or not os.getenv("YT_REFRESH_TOKEN"):
         print("وضع تجريبي: لن يتم الرفع.\nالعنوان:", title)
