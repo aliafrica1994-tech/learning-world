@@ -343,11 +343,16 @@ def make_deco(geo, pal, with_box=True):
     accent = pal[2]
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    tag = ar_text(CHANNEL_AR) + "  •  " + CHANNEL_EN
-    tw = d.textlength(tag, font=geo.chip_font)
+    f_ar = geo.chip_font
+    f_en = pick_font(FONT_EN, int(f_ar.size * 0.9))
+    parts = [(CHANNEL_EN, f_en), ("  •  ", f_en), (ar_text(CHANNEL_AR), f_ar)]
+    tw = sum(d.textlength(t, font=f) for t, f in parts)
     chip = [W / 2 - tw / 2 - 36, geo.pad, W / 2 + tw / 2 + 36, geo.pad + geo.chip_h]
     d.rounded_rectangle(chip, radius=geo.chip_h // 2, fill=(255, 255, 255, 235))
-    d.text((W / 2 - tw / 2, geo.pad + geo.chip_h * 0.17), tag, font=geo.chip_font, fill=accent)
+    x = W / 2 - tw / 2
+    for t, f in parts:
+        d.text((x, geo.pad + geo.chip_h * 0.17), t, font=f, fill=accent)
+        x += d.textlength(t, font=f)
     if with_box:
         box = geo.box
         sh_l = Image.new("RGBA", (W, H), (0, 0, 0, 0))
