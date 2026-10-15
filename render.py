@@ -24,7 +24,8 @@ FPS = 24
 CHANNEL_AR = "عالم التعلم"
 CHANNEL_EN = "Learning World"
 AR_VOICE = os.getenv("AR_VOICE", "ar-SA-ZariyahNeural")
-EN_VOICE = os.getenv("EN_VOICE", "en-US-AnaNeural")
+EN_VOICE = os.getenv("EN_VOICE", "en-US-GuyNeural")  # صوت يوسف (ولد)
+EN_PITCH = os.getenv("EN_PITCH", "+28Hz")  # رفع النبرة ليشبه صوت طفل
 
 FONT_AR = [
     "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Bold.ttf",
@@ -227,14 +228,18 @@ def _sfx(name):
     return p
 
 
-async def _tts_async(text, voice, rate, path):
+async def _tts_async(text, voice, rate, path, pitch=None):
     import edge_tts
-    await edge_tts.Communicate(text, voice, rate=rate).save(str(path))
+    if pitch:
+        await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(str(path))
+    else:
+        await edge_tts.Communicate(text, voice, rate=rate).save(str(path))
 
 
 def tts_file(text, lang):
-    voice, rate = (AR_VOICE, "-12%") if lang == "ar" else (EN_VOICE, "-8%")
-    h = hashlib.sha1(f"{voice}|{rate}|{text}".encode()).hexdigest()[:16]
+    voice, rate = (AR_VOICE, "-12%") if lang == "ar" else (EN_VOICE, "-6%")
+    pitch = None if lang == "ar" else EN_PITCH
+    h = hashlib.sha1(f"{voice}|{rate}|{pitch}|{text}".encode()).hexdigest()[:16]
     path = OUT / "tts" / f"{h}.mp3"
     if path.exists():
         return path
@@ -247,7 +252,8 @@ def tts_file(text, lang):
     last = None
     for attempt in range(3):
         try:
-            asyncio.run(_tts_async(text, voice, rate, path))
+            # آخر محاولة بلا رفع نبرة (احتياط إن رفضه الخادم)
+            asyncio.run(_tts_async(text, voice, rate, path, pitch if attempt < 2 else None))
             if path.exists() and path.stat().st_size > 500:
                 return path
         except Exception as e:  # noqa
@@ -303,9 +309,10 @@ class Geo:
         self.chip_font = f
         self.chip_h = int(f.size * 1.9)
         self.head_b = self.pad + self.chip_h + int(self.pad * 0.7)
-        self.bottom = H - self.pad - 14  # مساحة شريط التقدم
+        self.stage = int(H * (0.17 if self.vertical else 0.22))  # ارتفاع منصة الأخوين أسفل الشاشة
+        self.bottom = H - 14 - self.stage - int(self.pad * 0.5)  # فوق المنصة وشريط التقدم
         if self.vertical:
-            self.box = (self.pad, self.head_b, W - self.pad, self.head_b + int(H * 0.44))
+            self.box = (self.pad, self.head_b, W - self.pad, self.head_b + int(H * 0.40))
             self.panel = (self.pad, self.box[3] + int(self.pad * 0.7), W - self.pad, self.bottom)
         else:
             bw = int(W * 0.46)
@@ -733,10 +740,14 @@ def render_clip(out, geo, dur, audio, bubbles, deco, gradient_bg, layers, kb=Non
             yexpr = f"{y}+25*pow(max(0,1-(t-{t0:.3f})/{d_in}),2)"
         elif anim == "bob":
             yexpr = f"{y}-{int(L.get('amp', 22))}*abs(sin((t-{t0:.3f})*3.4))"
+        elif anim == "breathe":
+            yexpr = f"{y}+{int(L.get('amp', 5))}*sin(t*2.3)"
         else:
             yexpr = f"{y}"
         end = f"{t1:.3f}" if t1 is not None else f"{dur + 1:.3f}"
         en = f"between(t,{t0:.3f},{end})"
+        if L.get("gate"):
+            en = f"({en})*({L['gate']})"
         f.append(f"[{cur}][l{k}]overlay=x={x}:y='{yexpr}':enable='{en}':format=auto[s{k}]")
         cur, k = f"s{k}", k + 1
     if progress:
@@ -759,6 +770,55 @@ def render_clip(out, geo, dur, audio, bubbles, deco, gradient_bg, layers, kb=Non
             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", str(out)])
     sh(cmd)
     return out
+
+
+# ================================================================ الأخوان نور ويوسف
+def _kid_sprites(geo):
+    """يرجع {(who, state): Path}. الحالات: base, open, wide, blink  (مع ذراع مرفوعة إن wave)."""
+    import kids
+    cache = getattr(geo, "_sprites", None)
+    if cache is not None:
+        return cache
+    out = {}
+    h = geo.stage
+    for who in ("noor", "yousef"):
+        for wave in (False, True):
+            for state, (m, e) in {"base": ("closed", "open"), "open": ("open", "open"),
+                                  "wide": ("wide", "open"), "blink": ("closed", "closed")}.items():
+                im = kids.draw_kid(who, m, e, wave, 900).crop((0, 50, 900, 900))
+                im = im.resize((int(im.width * h / im.height), h), Image.LANCZOS)
+                out[(who, state, wave)] = save_png(im, f"kid_{who}_{state}_{int(wave)}_{h}.png")
+    geo._sprites = out
+    geo._sprite_w = Image.open(out[("noor", "base", False)]).width
+    return out
+
+
+def _gate(wins):
+    if not wins:
+        return "0"
+    return "(" + "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in wins) + ")"
+
+
+def kid_layers(geo, speech, wave=False):
+    """speech: {'noor': [(t0,t1),...], 'yousef': [...]}. يرجع طبقات الشخصيتين مع حركة الفم والرمش."""
+    sp = _kid_sprites(geo)
+    sw = geo._sprite_w
+    y = geo.H - 14 - geo.stage
+    xs = {"noor": int(geo.pad * 0.4), "yousef": geo.W - sw - int(geo.pad * 0.4)}
+    layers = []
+    for who, x in xs.items():
+        talk = _gate(speech.get(who, []))
+        phase = 0.0 if who == "noor" else 1.3
+        gates = {"base": None,
+                 "open": f"{talk}*lt(mod(t,0.26),0.13)",
+                 "wide": f"{talk}*between(mod(t,0.78),0.39,0.52)",
+                 "blink": f"lt(mod(t+{phase},3.6),0.12)"}
+        for state in ("base", "open", "wide", "blink"):
+            L = {"img": sp[(who, state, wave)], "x": x, "y": y, "t0": 0.0, "anim": "breathe", "amp": 5}
+            if gates[state]:
+                L["gate"] = gates[state]
+            layers.append(L)
+    return layers
 
 
 # ================================================================ مشهد كامل
@@ -859,6 +919,8 @@ def render_scene(ctx, scene, idx, progress):
         layers.append({"img": save_png(him, f"{pre}_e{i}.png"), "x": px0 - m + hx, "y": py0 - m + hy,
                        "t0": t_en[0], "t1": t_en[1] + 0.1, "anim": "static"})
 
+    layers += kid_layers(geo, {"noor": [(t_ar[0], t_ar[1])], "yousef": [(t_en[0], t_en[1])]},
+                         wave=(kind == "title"))
     out = OUT / f"{pre}.mp4"
     render_clip(out, geo, dur, audio, bub, deco, gbg, layers, kb, progress)
     return out, dur
@@ -978,6 +1040,10 @@ def render_quiz(ctx, q, idx, progress):
         ban = banner_img(bw_, bh_, lab_ar if not show_en else "الإجابة الصحيحة", right["en"], accent)
         layers.append({"img": save_png(ban, pre + "_ban.png"), "x": int((W - bw_) / 2),
                        "y": int(cd_y + (cd_h - bh_) / 2), "t0": t_ans + 0.1, "anim": "slide"})
+    noor_l = ["q_ar", "think", "ans_ar"] + ([] if show_en else [f"o{i}" for i in range(len(opts))])
+    yousef_l = ["q_en", "ans_en", "ans_w"] + ([f"o{i}" for i in range(len(opts))] if show_en else [])
+    speech = {"noor": [marks[k] for k in noor_l if k in marks], "yousef": [marks[k] for k in yousef_l if k in marks]}
+    layers += kid_layers(geo, speech)
     out = OUT / f"{pre}.mp4"
     render_clip(out, geo, dur, audio, bub, deco, gbg, layers, None, progress)
     return out, dur
