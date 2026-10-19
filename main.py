@@ -398,7 +398,7 @@ def _ts(sec):
 
 def make_seo(L, kind, chapters=None, long_url=None, day=0):
     tagline, kw, hashtag = TRACK_SEO.get(L.get("track_key"), ("دروس للأطفال", [], "#تعليم"))
-    age = L.get("age", "5-8").replace("-", " إلى ")
+    age = str(L.get("age", "5-8")).replace("-", " إلى ")
     if kind == "short":
         title = f"{L['title_ar']} في دقيقة | {L['title_en']} #Shorts"
         if len(title) > 98:
