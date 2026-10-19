@@ -213,10 +213,47 @@ def _silence(secs):
     return p
 
 
+def _make_jingle(path):
+    """لحن مقدمة قصير مبهج (يُولَّد برمجياً): أربع نغمات صاعدة ثم وتر مشرق."""
+    import numpy as np
+    import wave
+    sr = 24000
+    dur = 2.4
+    t = np.arange(int(sr * dur)) / sr
+    buf = np.zeros_like(t)
+
+    def bell(freq, start, length, amp):
+        m = (t >= start) & (t < start + length)
+        tt = t[m] - start
+        env = np.exp(-tt * 3.2) * np.minimum(1, tt * 90)
+        w = (np.sin(2 * np.pi * freq * tt) + 0.35 * np.sin(2 * np.pi * freq * 2 * tt) +
+             0.12 * np.sin(2 * np.pi * freq * 3 * tt))
+        buf[m] += amp * env * w
+
+    for i, f in enumerate((523.25, 659.25, 783.99, 1046.5)):
+        bell(f, 0.0 + i * 0.16, 1.0, 0.30)
+    for f in (523.25, 659.25, 783.99, 1046.5):
+        bell(f, 0.72, 1.6, 0.20)
+    for i, f in enumerate((2093.0, 2637.0, 3136.0)):
+        bell(f, 0.9 + i * 0.12, 0.6, 0.07)
+    buf = buf / max(1e-6, np.abs(buf).max()) * 0.8
+    wav = path.with_suffix(".wav")
+    with wave.open(str(wav), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes((buf * 32767).astype("<i2").tobytes())
+    sh(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-ar", "24000", "-ac", "1", "-c:a", "libmp3lame",
+        "-b:a", "96k", str(path)])
+
+
 def _sfx(name):
     p = OUT / "sfx" / f"{name}.mp3"
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
+        if name == "jingle":
+            _make_jingle(p)
+            return p
         if name == "tick":
             src = "sine=frequency=900:duration=0.12,afade=t=out:st=0.04:d=0.08,volume=0.6"
         elif name == "ding":
@@ -742,6 +779,10 @@ def render_clip(out, geo, dur, audio, bubbles, deco, gradient_bg, layers, kb=Non
             yexpr = f"{y}-{int(L.get('amp', 22))}*abs(sin((t-{t0:.3f})*3.4))"
         elif anim == "breathe":
             yexpr = f"{y}+{int(L.get('amp', 5))}*sin(t*2.3)"
+        elif anim == "hop":
+            yexpr = f"{y}-{int(L.get('amp', 26))}*abs(sin(t*6.5))"
+        elif anim == "fall":
+            yexpr = f"{y}+{int(L.get('speed', 900))}*(t-{t0:.3f})"
         else:
             yexpr = f"{y}"
         end = f"{t1:.3f}" if t1 is not None else f"{dur + 1:.3f}"
@@ -766,21 +807,23 @@ def render_clip(out, geo, dur, audio, bubbles, deco, gradient_bg, layers, kb=Non
     script.write_text(";\n".join(f), encoding="utf-8")
     cmd = (["ffmpeg", "-y", "-loglevel", "error"] + args +
            ["-filter_complex_script", str(script), "-map", "[v]", "-map", f"{ia}:a", "-t", f"{dur:.3f}",
-            "-r", str(FPS), "-c:v", "libx264", "-preset", os.getenv("X264_PRESET", "veryfast"), "-crf", "21",
+            "-r", str(FPS), "-c:v", "libx264", "-preset", os.getenv("X264_PRESET", "veryfast"), "-crf", "19",
             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", str(out)])
     sh(cmd)
     return out
 
 
 # ================================================================ الأخوان نور ويوسف
-def _kid_sprites(geo):
-    """يرجع {(who, state): Path}. الحالات: base, open, wide, blink  (مع ذراع مرفوعة إن wave)."""
+def _kid_sprites(geo, h=None):
+    """يرجع {(who, state, wave): Path} بارتفاع h. الحالات: base, open, wide, blink."""
     import kids
+    h = int(h or geo.stage)
     cache = getattr(geo, "_sprites", None)
-    if cache is not None:
-        return cache
+    if cache is None:
+        cache = geo._sprites = {}
+    if h in cache:
+        return cache[h]
     out = {}
-    h = geo.stage
     for who in ("noor", "yousef"):
         for wave in (False, True):
             for state, (m, e) in {"base": ("closed", "open"), "open": ("open", "open"),
@@ -788,8 +831,7 @@ def _kid_sprites(geo):
                 im = kids.draw_kid(who, m, e, wave, 900).crop((0, 50, 900, 900))
                 im = im.resize((int(im.width * h / im.height), h), Image.LANCZOS)
                 out[(who, state, wave)] = save_png(im, f"kid_{who}_{state}_{int(wave)}_{h}.png")
-    geo._sprites = out
-    geo._sprite_w = Image.open(out[("noor", "base", False)]).width
+    cache[h] = out
     return out
 
 
@@ -799,26 +841,111 @@ def _gate(wins):
     return "(" + "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in wins) + ")"
 
 
-def kid_layers(geo, speech, wave=False):
-    """speech: {'noor': [(t0,t1),...], 'yousef': [...]}. يرجع طبقات الشخصيتين مع حركة الفم والرمش."""
-    sp = _kid_sprites(geo)
-    sw = geo._sprite_w
-    y = geo.H - 14 - geo.stage
-    xs = {"noor": int(geo.pad * 0.4), "yousef": geo.W - sw - int(geo.pad * 0.4)}
+def kid_layers(geo, speech, wave=False, h=None, xs=None, y=None, cheer=None):
+    """speech: {'noor': [(t0,t1),...], 'yousef': [...]}. يرجع طبقات الشخصيتين مع حركة الفم والرمش.
+    cheer: نوافذ زمنية يقفز فيها الأخوان فرحاً ويرفعان اليد."""
+    h = int(h or geo.stage)
+    sp = _kid_sprites(geo, h)
+    sw = Image.open(sp[("noor", "base", False)]).width
+    y = geo.H - 14 - h if y is None else y
+    xs = xs or {"noor": int(geo.pad * 0.4), "yousef": geo.W - sw - int(geo.pad * 0.4)}
+    cg = _gate(cheer) if cheer else None
     layers = []
     for who, x in xs.items():
         talk = _gate(speech.get(who, []))
         phase = 0.0 if who == "noor" else 1.3
-        gates = {"base": None,
-                 "open": f"{talk}*lt(mod(t,0.26),0.13)",
-                 "wide": f"{talk}*between(mod(t,0.78),0.39,0.52)",
-                 "blink": f"lt(mod(t+{phase},3.6),0.12)"}
+        calm = f"(1-{cg})*" if cg else ""
+        gates = {"base": (f"(1-{cg})" if cg else None),
+                 "open": f"{calm}{talk}*lt(mod(t,0.26),0.13)",
+                 "wide": f"{calm}{talk}*between(mod(t,0.78),0.39,0.52)",
+                 "blink": f"{calm}lt(mod(t+{phase},3.6),0.12)"}
         for state in ("base", "open", "wide", "blink"):
             L = {"img": sp[(who, state, wave)], "x": x, "y": y, "t0": 0.0, "anim": "breathe", "amp": 5}
             if gates[state]:
                 L["gate"] = gates[state]
             layers.append(L)
+        if cg:
+            layers.append({"img": sp[(who, "base", True)], "x": x, "y": y, "t0": 0.0, "anim": "hop", "amp": 24,
+                           "gate": cg})
+            layers.append({"img": sp[(who, "open", True)], "x": x, "y": y, "t0": 0.0, "anim": "hop", "amp": 24,
+                           "gate": f"{cg}*lt(mod(t,0.30),0.15)"})
     return layers
+
+
+def confetti_layer(geo, t0, length=3.2, seed=1):
+    """قصاصات ملوّنة تتساقط على الشاشة (للاحتفال)."""
+    W, H = geo.W, geo.H
+    r = random.Random(seed)
+    im = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cols = [(255, 80, 100), (255, 200, 40), (60, 190, 120), (70, 140, 240), (190, 90, 220), (255, 140, 60)]
+    for _ in range(int(150 * W / 1080)):
+        x, y = r.randint(0, W), r.randint(0, H * 2)
+        w, h = r.randint(10, 24), r.randint(10, 24)
+        c = r.choice(cols)
+        if r.random() < 0.5:
+            d.ellipse([x, y, x + w, y + w], fill=c)
+        else:
+            d.rectangle([x, y, x + w, y + h], fill=c)
+    return {"img": save_png(im, f"confetti_{seed}_{W}.png"), "x": 0, "y": -2 * H, "t0": t0, "t1": t0 + length,
+            "anim": "fall", "speed": int(H * 3.0 / length) + 5}
+
+
+# ================================================================ المقدمة الثابتة للفيديوهات الطويلة
+def render_intro(ctx, idx, progress=None):
+    geo, W, H = ctx.geo, ctx.geo.W, ctx.geo.H
+    pre = f"s{idx:03d}"
+    pal = ((140, 210, 255), (255, 190, 220), (214, 70, 60))
+    parts = [("sfx", "jingle", "jg"), ("say", "أَهْلًا بِكُمْ فِي عَالَمِ التَّعَلُّمِ!", "ar", "a1"),
+             ("sil", 0.25), ("say", "Welcome to Learning World!", "en", "e1"), ("sil", 0.9)]
+    audio, dur, marks = compose_audio(parts, pre + "_a")
+    gbg = save_png(make_gradient_bg(geo, pal), pre + "_bg.png")
+    bub = save_png(make_bubbles(geo, 77), pre + "_bub.png")
+    blank = save_png(Image.new("RGBA", (W, H), (0, 0, 0, 0)), pre + "_deco.png")
+    # بطاقة الشعار
+    vertical = geo.vertical
+    cw, ch = (int(W * 0.88), int(H * 0.2)) if vertical else (int(W * 0.60), int(H * 0.42))
+    m = 40
+    card = Image.new("RGBA", (cw + 2 * m, ch + 2 * m), (0, 0, 0, 0))
+    d = ImageDraw.Draw(card)
+    d.rounded_rectangle([m + 8, m + 14, m + cw + 8, m + ch + 14], radius=int(ch * 0.18), fill=(0, 0, 0, 70))
+    card = card.filter(ImageFilter.GaussianBlur(10))
+    d = ImageDraw.Draw(card)
+    d.rounded_rectangle([m, m, m + cw, m + ch], radius=int(ch * 0.18), fill=(255, 255, 255, 245),
+                        outline=pal[2], width=8)
+    f1 = fit_font(FONT_AR, "عالم التعلم", cw * 0.8, ch * 0.42, ch * 0.5, d, True)
+    t1 = ar_text("عالم التعلم")
+    bb = d.textbbox((0, 0), t1, font=f1)
+    d.text((m + (cw - (bb[2] - bb[0])) / 2 - bb[0], m + ch * 0.07 - bb[1]), t1, font=f1, fill=pal[2],
+           stroke_width=3, stroke_fill=(255, 235, 200))
+    f2 = fit_font(FONT_AR, "نتعلّم • نلعب • نكتشف", cw * 0.7, ch * 0.16, ch * 0.2, d, True)
+    t2 = ar_text("نتعلّم • نلعب • نكتشف")
+    bb = d.textbbox((0, 0), t2, font=f2)
+    d.text((m + (cw - (bb[2] - bb[0])) / 2 - bb[0], m + ch * 0.55 - bb[1]), t2, font=f2, fill=(40, 90, 200))
+    f3 = fit_font(FONT_EN, "Learning World", cw * 0.5, ch * 0.13, ch * 0.16, d, False)
+    bb = d.textbbox((0, 0), "Learning World", font=f3)
+    d.text((m + (cw - (bb[2] - bb[0])) / 2 - bb[0], m + ch * 0.80 - bb[1]), "Learning World", font=f3,
+           fill=(90, 90, 130))
+    cx, cy = int((W - cw) / 2 - m), int(H * (0.06 if not vertical else 0.08))
+    layers = [{"img": save_png(card, pre + "_logo.png"), "x": cx, "y": cy, "t0": 0.3, "anim": "pop"}]
+    # نجوم وأيقونات
+    for k, (emo, fx, fy, sz) in enumerate((("✨", 0.07, 0.12, 0.13), ("⭐", 0.84, 0.10, 0.12),
+                                           ("📚", 0.06, 0.5, 0.12), ("🔤", 0.86, 0.5, 0.12))):
+        e = emoji_img(emo, H * sz)
+        if e:
+            layers.append({"img": save_png(e, f"{pre}_e{k}.png"), "x": int(W * fx), "y": int(H * fy),
+                           "t0": 0.5 + 0.12 * k, "anim": "bob", "amp": 16})
+    # الأخوان بحجم كبير
+    h_k = int(H * (0.42 if not vertical else 0.30))
+    sw = Image.open(_kid_sprites(geo, h_k)[("noor", "base", True)]).width
+    gap = int(W * 0.04)
+    xs = {"noor": int(W / 2 - sw - gap / 2), "yousef": int(W / 2 + gap / 2)}
+    layers += kid_layers(geo, {"noor": [marks["a1"]], "yousef": [marks["e1"]]}, wave=True, h=h_k, xs=xs,
+                         y=H - h_k + int(H * 0.02))
+    layers.append(confetti_layer(geo, 0.1, 2.8, seed=11))
+    out = OUT / f"{pre}.mp4"
+    render_clip(out, geo, dur, audio, bub, blank, gbg, layers, None, progress)
+    return out, dur
 
 
 # ================================================================ مشهد كامل
@@ -840,6 +967,8 @@ def render_scene(ctx, scene, idx, progress):
     accent = pal[2]
     kind = scene.get("kind", "text")
     pre = f"s{idx:03d}"
+    if kind == "intro":
+        return render_intro(ctx, idx, progress)
     if kind == "quiz":
         return render_quiz(ctx, scene, idx, progress)
 
@@ -919,8 +1048,12 @@ def render_scene(ctx, scene, idx, progress):
         layers.append({"img": save_png(him, f"{pre}_e{i}.png"), "x": px0 - m + hx, "y": py0 - m + hy,
                        "t0": t_en[0], "t1": t_en[1] + 0.1, "anim": "static"})
 
+    celebrate = kind == "title" and scene.get("emoji") in ("🏆", "🌟")
     layers += kid_layers(geo, {"noor": [(t_ar[0], t_ar[1])], "yousef": [(t_en[0], t_en[1])]},
-                         wave=(kind == "title"))
+                         wave=(kind == "title" and not celebrate),
+                         cheer=[(0.3, dur - 0.2)] if celebrate else None)
+    if celebrate:
+        layers.append(confetti_layer(geo, 0.3, min(3.2, dur - 0.5), seed=idx + 3))
     out = OUT / f"{pre}.mp4"
     render_clip(out, geo, dur, audio, bub, deco, gbg, layers, kb, progress)
     return out, dur
@@ -1043,7 +1176,8 @@ def render_quiz(ctx, q, idx, progress):
     noor_l = ["q_ar", "think", "ans_ar"] + ([] if show_en else [f"o{i}" for i in range(len(opts))])
     yousef_l = ["q_en", "ans_en", "ans_w"] + ([f"o{i}" for i in range(len(opts))] if show_en else [])
     speech = {"noor": [marks[k] for k in noor_l if k in marks], "yousef": [marks[k] for k in yousef_l if k in marks]}
-    layers += kid_layers(geo, speech)
+    layers += kid_layers(geo, speech, cheer=[(t_ans + 0.1, min(dur - 0.1, t_ans + 2.9))])
+    layers.append(confetti_layer(geo, t_ans + 0.1, 2.8, seed=idx + 50))
     out = OUT / f"{pre}.mp4"
     render_clip(out, geo, dur, audio, bub, deco, gbg, layers, None, progress)
     return out, dur

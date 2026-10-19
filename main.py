@@ -50,7 +50,8 @@ def save_history(h):
 
 # ---------------------------------------------------------------- الدروس من Gemini
 PROMPT = """أنت معلم أطفال محترف للوطن العربي ومصمم مناهج. اكتب درساً كاملاً ومنظماً لأطفال بعمر {age} سنوات
-في موضوع: «{topic}» (من مسار: {track}). سيُعرض في فيديو تعليمي مدته نحو 5 دقائق.
+في موضوع: «{topic}» (من مسار: {track}). {style}
+سيُعرض في فيديو تعليمي مدته نحو 5 دقائق.
 
 الشروط:
 - عربية فصحى مبسطة جداً وجمل قصيرة (حتى 12 كلمة)، وإنجليزية بسيطة موازية لها.
@@ -103,7 +104,7 @@ def gemini_lesson(spec, history, n_scenes=10):
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         return None
-    prompt = PROMPT.format(age=spec["age"], topic=spec["topic"], track=spec["track"], n=n_scenes,
+    prompt = PROMPT.format(age=spec["age"], topic=spec["topic"], track=spec["track"], style=spec.get("style", ""), n=n_scenes,
                            prev=" | ".join(history.get("titles", [])[-25:]) or "لا يوجد")
     data = _post_gemini(prompt, key)
     if not data:
@@ -229,7 +230,8 @@ def plan_long(L, day):
         sc["sec"] = sec
         plan.append(sc)
 
-    add("المقدمة", kind="title", emoji="👋",
+    plan.append({"kind": "intro", "sec": "المقدمة"})
+    add(None, kind="title", emoji="👋",
         ar=f"مرحباً يا أصدقاء! درسنا اليوم: {L['title_ar']}",
         ar_tts=f"مَرْحَبًا يَا أَصْدِقَاءُ! دَرْسُنَا اليَوْمَ: {L.get('title_ar_tts') or L['title_ar']}",
         en=f"Hello friends! Today's lesson: {L['title_en']}")
@@ -446,6 +448,9 @@ def main():
 
     want_long = kind in ("daily", "long")
     want_short = kind in ("daily", "short")
+    every = int(os.getenv("SHORT_EVERY") or 3)
+    if kind == "daily" and day % every != 0:
+        want_short = False  # فيديو قصير واحد فقط كل عدة دروس
     long_plan = plan_long(L, day)
     short_plan = plan_short(L)
     images = render.fetch_images(all_visuals(long_plan if want_long else short_plan) +
