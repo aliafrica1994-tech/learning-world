@@ -918,8 +918,8 @@ def render_intro(ctx, idx, progress=None):
     bb = d.textbbox((0, 0), t1, font=f1)
     d.text((m + (cw - (bb[2] - bb[0])) / 2 - bb[0], m + ch * 0.07 - bb[1]), t1, font=f1, fill=pal[2],
            stroke_width=3, stroke_fill=(255, 235, 200))
-    f2 = fit_font(FONT_AR, "نتعلّم • نلعب • نكتشف", cw * 0.7, ch * 0.16, ch * 0.2, d, True)
-    t2 = ar_text("نتعلّم • نلعب • نكتشف")
+    f2 = fit_font(FONT_AR, "نتعلّم، نلعب، نكتشف", cw * 0.7, ch * 0.16, ch * 0.2, d, True)
+    t2 = ar_text("نتعلّم، نلعب، نكتشف")
     bb = d.textbbox((0, 0), t2, font=f2)
     d.text((m + (cw - (bb[2] - bb[0])) / 2 - bb[0], m + ch * 0.55 - bb[1]), t2, font=f2, fill=(40, 90, 200))
     f3 = fit_font(FONT_EN, "Learning World", cw * 0.5, ch * 0.13, ch * 0.16, d, False)
