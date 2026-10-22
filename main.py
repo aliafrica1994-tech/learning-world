@@ -264,7 +264,7 @@ def plan_long(L, day):
     add("الختام", kind="title", emoji="🌟",
         ar=f"أحسنتم يا أبطال! اشتركوا في القناة. وغداً: {nxt}",
         ar_tts=f"أَحْسَنْتُمْ يَا أَبْطَالُ! اشْتَرِكُوا فِي القَنَاةِ. وَغَدًا: {nxt}",
-        en="Great job, heroes! Subscribe, and see you tomorrow for a new lesson!", tail=1.2)
+        en="Great job, heroes! Subscribe, and see you tomorrow for a new lesson!", tail=1.2, subscribe=True)
     return plan
 
 

@@ -346,7 +346,7 @@ class Geo:
         self.chip_font = f
         self.chip_h = int(f.size * 1.9)
         self.head_b = self.pad + self.chip_h + int(self.pad * 0.7)
-        self.stage = int(H * (0.17 if self.vertical else 0.22))  # ارتفاع منصة الأخوين أسفل الشاشة
+        self.stage = int(H * (0.19 if self.vertical else 0.25))  # ارتفاع منصة الأخوين أسفل الشاشة
         self.bottom = H - 14 - self.stage - int(self.pad * 0.5)  # فوق المنصة وشريط التقدم
         if self.vertical:
             self.box = (self.pad, self.head_b, W - self.pad, self.head_b + int(H * 0.40))
@@ -910,7 +910,7 @@ def make_thumbnail(title_ar, title_en, emoji, day, out):
         od.ellipse([x - c, y - c, x + c, y + c], fill=(255, 255, 255, 38))
     im = Image.alpha_composite(im, ov)
     # الأخوان
-    kh = 470
+    kh = 520
     for who, x in (("noor", -70), ("yousef", 210)):
         k = kids.draw_kid(who, "open", "open", True, 900).crop((0, 50, 900, 900))
         k = k.resize((int(k.width * kh / k.height), kh), Image.LANCZOS)
@@ -1027,6 +1027,31 @@ def _paste_layer(img, name):
     return save_png(img, name)
 
 
+def subscribe_card(geo, accent):
+    """بطاقة «اشترك» كبيرة: زر أحمر دائري الأطراف + جرس. تُرسم بلا شعارات خارجية."""
+    bw, bh = geo.bw, geo.bh
+    im = card_base(bw, bh, geo.radius, accent)
+    d = ImageDraw.Draw(im)
+    pw, ph = int(bw * 0.72), int(bh * 0.30)
+    px, py = int((bw - pw) / 2), int(bh * 0.46)
+    d.rounded_rectangle([px + 4, py + 10, px + pw + 4, py + ph + 10], radius=ph // 2, fill=(0, 0, 0, 60))
+    d.rounded_rectangle([px, py, px + pw, py + ph], radius=ph // 2, fill=(222, 32, 40), outline=(255, 255, 255), width=6)
+    f = fit_font(FONT_AR, "اشترك", pw * 0.5, ph * 0.62, ph * 0.7, d, True)
+    t = ar_text("اشترك")
+    bb = d.textbbox((0, 0), t, font=f)
+    d.text((px + pw * 0.60 - (bb[2] - bb[0]) / 2 - bb[0], py + (ph - (bb[3] - bb[1])) / 2 - bb[1]), t, font=f,
+           fill=(255, 255, 255))
+    fe = pick_font(FONT_EN, int(ph * 0.20))
+    d.text((px + pw * 0.60 - d.textlength("SUBSCRIBE", font=fe) / 2, py + ph * 0.80 - fe.size / 2), "SUBSCRIBE",
+           font=fe, fill=(255, 225, 225))
+    ft = fit_font(FONT_AR, "هل أعجبكم الدرس؟", bw * 0.8, bh * 0.14, bh * 0.16, d, True)
+    tt = ar_text("هل أعجبكم الدرس؟")
+    bb = d.textbbox((0, 0), tt, font=ft)
+    d.text(((bw - (bb[2] - bb[0])) / 2 - bb[0], bh * 0.12 - bb[1]), tt, font=ft, fill=INK, stroke_width=2,
+           stroke_fill=(255, 255, 255))
+    return im, (px, py, pw, ph)
+
+
 def render_scene(ctx, scene, idx, progress):
     geo, W, H = ctx.geo, ctx.geo.W, ctx.geo.H
     pal = PALETTES[idx % len(PALETTES)]
@@ -1067,6 +1092,17 @@ def render_scene(ctx, scene, idx, progress):
             if e:
                 layers.append({"img": save_png(e, pre + "_emo.png"), "x": int(bx + (geo.bw - e.width) / 2),
                                "y": int(by + (geo.bh - e.height) / 2 + 10), "t0": 0.25, "anim": "bob", "amp": 18})
+    elif kind == "title" and scene.get("subscribe"):
+        card, (sx, sy, sw, sh) = subscribe_card(geo, accent)
+        layers.append({"img": save_png(card, pre + "_card.png"), "x": bx, "y": by, "t0": 0.05, "anim": "pop"})
+        bell = emoji_img("🔔", sh * 0.72)
+        if bell:
+            layers.append({"img": save_png(bell, pre + "_bell.png"), "x": int(bx + sx + sw * 0.07),
+                           "y": int(by + sy + (sh - bell.height) / 2), "t0": 0.6, "anim": "bob", "amp": 8})
+        hand = emoji_img("👆", sh * 0.6)
+        if hand:
+            layers.append({"img": save_png(hand, pre + "_hand.png"), "x": int(bx + sx + sw * 0.86),
+                           "y": int(by + sy + sh * 0.60), "t0": 1.2, "anim": "bob", "amp": 14})
     elif kind == "title":
         card, R = circle_card(geo, pal)
         layers.append({"img": save_png(card, pre + "_card.png"), "x": bx, "y": by, "t0": 0.05, "anim": "pop"})
