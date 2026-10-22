@@ -245,7 +245,12 @@ def plan_long(L, day):
             sc = {"kind": "text", "ar": k["ar"], "ar_tts": _tts(k), "en": k["en"], "emoji": k.get("emoji", "⭐"),
                   "visual": k.get("visual"), "tail": 0.35}
             add(None, **sc)
-    if L.get("quiz"):
+    if L.get("quiz") and L.get("game"):
+        add("الألعاب", kind="title", emoji="🎯", ar="هيا نبدأ الجولة الأولى!", ar_tts="هَيَّا نَبْدَأُ الجَوْلَةَ الأُولَى!",
+            en="Let's start the first round!")
+        for q in L["quiz"]:
+            add(None, kind="quiz", **q)
+    elif L.get("quiz"):
         add("اختبار قصير", kind="title", emoji="🎯", ar="وقت الاختبار! هل تعرفون الإجابة؟",
             ar_tts="وَقْتُ الِاخْتِبَارِ! هَلْ تَعْرِفُونَ الإِجَابَةَ؟", en="Quiz time! Do you know the answer?")
         for q in L["quiz"]:
@@ -379,6 +384,8 @@ def upload(video, title, description, tags, thumb=None):
 # ---------------------------------------------------------------- السيو
 TRACK_SEO = {
     "ar_letters": ("تعلّم الحروف العربية للأطفال", ["الحروف العربية", "تعليم الحروف", "حروف الهجاء", "Arabic alphabet", "learn Arabic letters"], "#الحروف_العربية"),
+    "ألعاب العدّ والأنماط": ("ألعاب تعليمية للأطفال: العدّ والأنماط", ["ألعاب تعليمية للأطفال", "لعبة العد", "ذكاء الأطفال", "kids learning games", "counting game for kids"], "#ألعاب_تعليمية"),
+    "ألغاز الذكاء": ("ألغاز للأطفال: من أنا؟", ["ألغاز للأطفال", "من أنا", "أسئلة ذكاء للأطفال", "riddles for kids", "who am I"], "#ألغاز_للأطفال"),
     "numbers": ("تعلّم الأرقام والعدّ للأطفال", ["الأرقام للأطفال", "تعليم العد", "تعلم الأرقام", "counting for kids", "learn numbers"], "#الأرقام"),
     "en_letters": ("تعلّم الحروف الإنجليزية للأطفال", ["الحروف الإنجليزية", "تعليم الانجليزية للاطفال", "English alphabet for kids", "ABC phonics"], "#الإنجليزية_للأطفال"),
     "عالمي من حولي": ("اكتشف العالم من حولك", ["تعليم الأطفال المفردات", "الحيوانات للأطفال", "كلمات للأطفال", "kids vocabulary", "learn words"], "#عالمي_من_حولي"),
@@ -433,6 +440,15 @@ def make_seo(L, kind, chapters=None, long_url=None, day=0):
 
 
 # ---------------------------------------------------------------- التشغيل
+def thumb_for(L, day):
+    try:
+        emo = next((s.get("emoji") for s in L.get("scenes", []) if s.get("emoji")), "⭐")
+        return render.make_thumbnail(L["title_ar"], L.get("title_en", ""), emo, day, OUT / "thumb.jpg")
+    except Exception as e:  # noqa
+        print(f"[thumbnail] تعذر الإنشاء: {type(e).__name__}: {e}")
+        return None
+
+
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "daily"
     if kind not in ("daily", "long", "short"):
@@ -465,8 +481,9 @@ def main():
         print("العنوان:", title)
         if dry:
             print(desc)
+            thumb_for(L, day)
         else:
-            vid = upload(video, title, desc, tags)
+            vid = upload(video, title, desc, tags, thumb=thumb_for(L, day))
             long_url, uploaded = f"https://youtu.be/{vid}", True
     if want_short:
         video, _, total = build_video(short_plan, (1080, 1920), "short", images)

@@ -891,6 +891,72 @@ def confetti_layer(geo, t0, length=3.2, seed=1):
             "anim": "fall", "speed": int(H * 3.0 / length) + 5}
 
 
+# ================================================================ الصورة المصغّرة (Thumbnail)
+def make_thumbnail(title_ar, title_en, emoji, day, out):
+    """صورة 1280x720: نور ويوسف على اليسار، العنوان الكبير والإيموجي على اليمين."""
+    import kids
+    W, H = 1280, 720
+    top, bot, acc = PALETTES[day % len(PALETTES)]
+    im = Image.new("RGBA", (W, H))
+    px = ImageDraw.Draw(im)
+    for y in range(H):
+        k = y / (H - 1)
+        px.line([(0, y), (W, y)], fill=tuple(int(top[i] * (1 - k) + bot[i] * k) for i in range(3)) + (255,))
+    r = random.Random(day)
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(ov)
+    for _ in range(14):
+        c, x, y = r.randint(40, 150), r.randint(0, W), r.randint(0, H)
+        od.ellipse([x - c, y - c, x + c, y + c], fill=(255, 255, 255, 38))
+    im = Image.alpha_composite(im, ov)
+    # الأخوان
+    kh = 470
+    for who, x in (("noor", -70), ("yousef", 210)):
+        k = kids.draw_kid(who, "open", "open", True, 900).crop((0, 50, 900, 900))
+        k = k.resize((int(k.width * kh / k.height), kh), Image.LANCZOS)
+        im.alpha_composite(k, (x, H - kh + 30))
+    d = ImageDraw.Draw(im)
+    # العنوان العربي (سطران كحد أقصى)
+    box_l, box_r = 600, W - 40
+    words = title_ar.split()
+    lines = [title_ar]
+    if len(words) > 2:
+        mid = (len(words) + 1) // 2
+        lines = [" ".join(words[:mid]), " ".join(words[mid:])]
+    f = None
+    for st in range(150, 40, -6):
+        f = pick_font(FONT_AR, st)
+        if all(d.textbbox((0, 0), ar_text(t), font=f, stroke_width=10)[2] <= box_r - box_l for t in lines):
+            break
+    y = 40
+    for t in lines:
+        tx = ar_text(t)
+        bb = d.textbbox((0, 0), tx, font=f, stroke_width=10)
+        x = box_r - (bb[2] - bb[0]) - bb[0]
+        d.text((x, y - bb[1]), tx, font=f, fill=(255, 255, 255), stroke_width=10, stroke_fill=(40, 30, 70))
+        y += int((bb[3] - bb[1]) * 1.12)
+    # الإيموجي الكبير
+    e = emoji_img(emoji or "⭐", 230)
+    if e:
+        im.alpha_composite(e, (int((box_l + box_r) / 2 - e.width / 2), max(y + 10, 330)))
+    # شريط الإنجليزية
+    fe = pick_font(FONT_EN, 46)
+    te = (title_en or "")[:40]
+    bb = d.textbbox((0, 0), te, font=fe)
+    pw, ph = bb[2] - bb[0] + 50, 80
+    px0 = box_r - pw
+    d.rounded_rectangle([px0, 570, box_r, 570 + ph - 12], radius=30, fill=(255, 255, 255, 235), outline=acc, width=5)
+    d.text((px0 + 25 - bb[0], 570 + (ph - 12 - (bb[3] - bb[1])) / 2 - bb[1]), te, font=fe, fill=acc)
+    # شارة القناة
+    fc = pick_font(FONT_AR, 40)
+    tc = ar_text("عالم التعلم")
+    bb = d.textbbox((0, 0), tc, font=fc)
+    d.rounded_rectangle([20, 20, 40 + bb[2] - bb[0], 90], radius=30, fill=acc)
+    d.text((30 - bb[0], 55 - (bb[3] - bb[1]) / 2 - bb[1]), tc, font=fc, fill=(255, 255, 255))
+    im.convert("RGB").save(out, quality=92)
+    return out
+
+
 # ================================================================ المقدمة الثابتة للفيديوهات الطويلة
 def render_intro(ctx, idx, progress=None):
     geo, W, H = ctx.geo, ctx.geo.W, ctx.geo.H
@@ -1107,10 +1173,10 @@ def render_quiz(ctx, q, idx, progress):
         cd_y = tiles_xy[-1][1] + th + gap
         cd_h = geo.bottom - cd_y
     else:
-        qh = int(avail * (0.38 if q.get("stimulus") else 0.31))
+        qh = int(avail * (0.52 if q.get("stimulus") else 0.31))
         gap = int(pad * 0.5)
         tw = int((W - 2 * pad - 2 * gap) / 3)
-        th = int(avail * 0.37)
+        th = int(avail * (0.30 if q.get("stimulus") else 0.37))
         ty = top + qh + gap
         tiles_xy = [(pad + (2 - i) * (tw + gap), ty) for i in range(3)]
         cd_y = ty + th + gap
