@@ -26,6 +26,7 @@ from pathlib import Path
 import requests
 
 import curriculum
+import marathon
 import render
 from lessons_fallback import FALLBACK_LESSONS
 
@@ -455,15 +456,41 @@ def thumb_for(L, day):
         return None
 
 
+def run_marathon(history, day):
+    """ماراثون الجمعة: يدمج آخر الدروس ويرفعها كفيديو طويل واحد (أي فشل لا يؤثر على ما سبق)."""
+    try:
+        res = marathon.build(history, OUT)
+        if not res:
+            return
+        video, chapters, got, total = res
+        title, desc, tags = marathon.seo(chapters, got, total)
+        print("العنوان:", title)
+        dry = os.getenv("DRY_RUN") == "1" or not os.getenv("YT_REFRESH_TOKEN")
+        thumb = None
+        try:
+            thumb = render.make_thumbnail("ماراثون التعلم", "Learning Marathon", "🏆", day, OUT / "marathon_thumb.jpg")
+        except Exception as e:  # noqa
+            print(f"[thumbnail] تعذر الإنشاء: {e}")
+        if dry:
+            print(desc)
+            return
+        upload(video, title, desc, tags, thumb=thumb)
+    except Exception as e:  # noqa
+        print(f"[marathon] فشل: {type(e).__name__}: {str(e)[:300]}")
+
+
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "daily"
-    if kind not in ("daily", "long", "short"):
-        sys.exit("الاستخدام: python main.py daily|long|short")
+    if kind not in ("daily", "long", "short", "marathon"):
+        sys.exit("الاستخدام: python main.py daily|long|short|marathon")
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
 
     history = load_history()
+    if kind == "marathon":
+        run_marathon(history, history.get("day", 0))
+        return
     day = int(os.getenv("DAY") or history.get("day", 0))
     L = get_lesson(day)
     print(f"اليوم {day}: [{L.get('track_key')}] {L['title_ar']} / {L['title_en']}")
@@ -492,6 +519,7 @@ def main():
         else:
             vid = upload(video, title, desc, tags, thumb=thumb_for(L, day))
             long_url, uploaded = f"https://youtu.be/{vid}", True
+            marathon.archive(video, day, L, history, OUT)
     if want_short:
         render.MUSIC_STYLE = day + 4
         video, _, total = build_video(short_plan, (1080, 1920), "short", images)
@@ -511,6 +539,11 @@ def main():
     if uploaded and kind == "daily":
         history["day"] = day + 1
         history.setdefault("titles", []).append(L["title_ar"])
+        save_history(history)
+        import datetime
+        if (datetime.datetime.utcnow() + datetime.timedelta(hours=1)).weekday() == 4:  # الجمعة بتوقيت الجزائر
+            run_marathon(history, day)
+    elif uploaded:
         save_history(history)
 
 
