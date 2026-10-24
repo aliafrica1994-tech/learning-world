@@ -2,13 +2,13 @@ name: عالم التعلم - نشر تلقائي
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "17 7 * * *"   # كل يوم 07:17 UTC (08:17 بتوقيت الجزائر): فيديو طويل (+ Short كل 3 دروس) + ماراثون كل جمعة
   workflow_dispatch:
     inputs:
       kind:
         description: "نوع الفيديو"
         type: choice
-        options: [daily, short, long]
+        options: [daily, short, long, marathon]
         default: daily
       dry_run:
         description: "تجربة بدون رفع (1) أو رفع حقيقي (0)"
@@ -45,9 +45,10 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || '0' }}
           PRIVACY: ${{ vars.PRIVACY || 'public' }}
-        run: python main.py ${{ github.event.inputs.kind || 'daily' }}
+        run: python main.py ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.kind || 'daily' }}
 
       - name: حفظ الفيديو التجريبي
         if: always()
@@ -57,10 +58,11 @@ jobs:
           path: |
             output/long.mp4
             output/short.mp4
+            output/marathon.mp4
           retention-days: 3
           if-no-files-found: ignore
 
-      - name: حفظ سجل الدروس
+      - name: حفظ سجل الدروس (لعدم التكرار)
         run: |
           git config user.name "learning-world-bot"
           git config user.email "bot@users.noreply.github.com"
