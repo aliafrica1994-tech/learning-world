@@ -963,7 +963,7 @@ def render_intro(ctx, idx, progress=None):
     pre = f"s{idx:03d}"
     pal = ((140, 210, 255), (255, 190, 220), (214, 70, 60))
     parts = [("sfx", "jingle", "jg"), ("say", "أَهْلًا بِكُمْ فِي عَالَمِ التَّعَلُّمِ!", "ar", "a1"),
-             ("sil", 0.25), ("say", "Welcome to Learning World!", "en", "e1"), ("sil", 0.9)]
+             ("sil", 0.12), ("say", "Welcome to Learning World!", "en", "e1"), ("sil", 0.3)]
     audio, dur, marks = compose_audio(parts, pre + "_a")
     gbg = save_png(make_gradient_bg(geo, pal), pre + "_bg.png")
     bub = save_png(make_bubbles(geo, 77), pre + "_bub.png")
@@ -1286,43 +1286,118 @@ def render_quiz(ctx, q, idx, progress):
 
 
 # ================================================================ موسيقى خلفية هادئة (تُولَّد برمجياً)
-def make_music(path, seconds=48, seed=7):
+MUSIC_STYLE = 0
+MUSIC_NAMES = ["صندوق الموسيقى", "ماريمبا مرحة", "أوكوليلي", "ناي هادئ", "أجراس سحرية", "رقصة الفالس",
+               "إلكترونية لطيفة", "مغامرة"]
+# (bpm، نبضات في المقياس، نغمة الجذر MIDI، التوزيع، الآلة، نمط اللحن، إيقاع، تتابع الأوتار)
+MUSIC_STYLES = [
+    (92, 4, 60, "box", "box", "rand", False, (0, 9, 5, 7)),
+    (108, 4, 62, "marimba", "marimba", "step", True, (0, 7, 9, 5)),
+    (100, 4, 55, "strum", "pluck", "rand", False, (0, 5, 7, 5)),
+    (76, 4, 57, "pad", "flute", "step", False, (9, 5, 0, 7)),
+    (84, 4, 62, "arp", "bell", "arp", False, (0, 9, 5, 7)),
+    (118, 3, 67, "waltz", "box", "rand", False, (0, 5, 7, 0)),
+    (112, 4, 65, "arp", "synth", "arp", True, (0, 7, 9, 5)),
+    (100, 4, 62, "march", "marimba", "step", True, (0, 5, 0, 7)),
+]
+_TRIADS = {0: (0, 4, 7), 5: (5, 9, 12), 7: (7, 11, 14), 9: (9, 12, 16)}
+_PENT = (0, 2, 4, 7, 9, 12, 14, 16)
+
+
+def make_music(path, seconds=64, style=0):
+    """موسيقى أطفال مولّدة برمجياً بثمانية أساليب مختلفة (تتغير مع كل درس)."""
     import numpy as np
     import wave
     sr = 24000
-    rnd = random.Random(seed)
-    bpm = 92
+    style = int(style) % len(MUSIC_STYLES)
+    bpm, bpb, root, arrange, inst, mel, perc, prog = MUSIC_STYLES[style]
+    rnd = random.Random(style * 31 + 7)
     beat = 60 / bpm
-    notes = {"C": 261.63, "D": 293.66, "E": 329.63, "G": 392.0, "A": 440.0, "F": 349.23, "B": 493.88}
-    chords = [("C", ["C", "E", "G"]), ("A", ["A", "C", "E"]), ("F", ["F", "A", "C"]), ("G", ["G", "B", "D"])]
-    pent = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]
     total = int(sr * seconds)
     buf = np.zeros(total, dtype=np.float32)
 
-    def tone(freq, dur, amp):
+    def hz(semi, octave=0):
+        return 440.0 * 2 ** ((root + semi + 12 * octave - 69) / 12)
+
+    def tone(freq, dur, amp, kind=None):
+        kind = kind or inst
         n = int(sr * dur)
         t = np.arange(n) / sr
-        env = np.exp(-t * 4.5) * np.minimum(1, t * 200)
-        y = np.sin(2 * np.pi * freq * t) + 0.3 * np.sin(2 * np.pi * freq * 2 * t) + 0.1 * np.sin(2 * np.pi * freq * 3 * t)
+        if kind == "marimba":
+            y = np.sin(2 * np.pi * freq * t) + 0.25 * np.sin(2 * np.pi * freq * 3.9 * t)
+            env = np.exp(-t * 8) * np.minimum(1, t * 400)
+        elif kind == "pluck":
+            y = sum(np.sin(2 * np.pi * freq * k * t) / k * np.exp(-t * (2 + 2.5 * k)) for k in range(1, 6))
+            env = np.minimum(1, t * 500)
+        elif kind == "flute":
+            vib = 1 + 0.006 * np.sin(2 * np.pi * 5 * t)
+            y = np.sin(2 * np.pi * freq * t * vib) + 0.18 * np.sin(2 * np.pi * freq * 2 * t)
+            env = np.minimum(1, t * 14) * np.exp(-t * 1.4)
+        elif kind == "bell":
+            y = (np.sin(2 * np.pi * freq * t) + 0.5 * np.sin(2 * np.pi * freq * 2.76 * t) +
+                 0.25 * np.sin(2 * np.pi * freq * 5.4 * t))
+            env = np.exp(-t * 2.6) * np.minimum(1, t * 300)
+        elif kind == "synth":
+            y = sum(np.sin(2 * np.pi * freq * k * t) / (k * k) * (1 if k % 4 == 1 else -1) for k in (1, 3, 5, 7))
+            env = np.exp(-t * 5.5) * np.minimum(1, t * 250)
+        else:  # box
+            y = np.sin(2 * np.pi * freq * t) + 0.3 * np.sin(2 * np.pi * freq * 2 * t) + 0.1 * np.sin(2 * np.pi * freq * 3 * t)
+            env = np.exp(-t * 4.5) * np.minimum(1, t * 200)
         return (y * env * amp).astype(np.float32)
 
-    t_cur, step = 0.0, 0
-    while t_cur < seconds - 1:
-        name, tri = chords[(step // 8) % 4]
-        # الجهير: نغمة على أول كل مقياس
-        if step % 8 == 0:
-            f0 = {"C": 130.8, "A": 110.0, "F": 87.3, "G": 98.0}[name]
-            seg = tone(f0, 2.4, 0.5)
-            i0 = int(t_cur * sr)
+    def put(seg, t):
+        i0 = int(t * sr)
+        if i0 < total:
             buf[i0:i0 + len(seg)] += seg[:max(0, total - i0)]
-        # لحن صندوق الموسيقى
-        if rnd.random() < 0.75:
-            f = rnd.choice(pent)
-            seg = tone(f, 1.2, 0.28)
-            i0 = int(t_cur * sr)
-            buf[i0:i0 + len(seg)] += seg[:max(0, total - i0)]
-        t_cur += beat / 2
-        step += 1
+
+    def kick(t):
+        n = int(sr * 0.18)
+        tt = np.arange(n) / sr
+        f = 50 + 90 * np.exp(-tt * 30)
+        put((np.sin(2 * np.pi * np.cumsum(f) / sr) * np.exp(-tt * 18) * 0.5).astype(np.float32), t)
+
+    def shaker(t):
+        n = int(sr * 0.05)
+        noise = np.random.RandomState(int(t * 100) % 9999).randn(n)
+        put((np.diff(noise, prepend=0) * np.exp(-np.arange(n) / sr * 60) * 0.12).astype(np.float32), t)
+
+    steps_per_bar = bpb * 2
+    n_steps = int(seconds / (beat / 2)) - 2
+    pent_i = 3
+    for step in range(n_steps):
+        t = step * beat / 2
+        bar, pos = divmod(step, steps_per_bar)
+        degree = prog[bar % 4]
+        tri = _TRIADS[degree]
+        if pos == 0:
+            put(tone(hz(degree, -1), beat * bpb * 0.95, 0.42, "box" if inst != "flute" else "flute"), t)
+        if arrange == "strum" and pos % 4 == 0:
+            for k, st in enumerate(tri):
+                put(tone(hz(st, 0), 1.0, 0.16, "pluck"), t + k * 0.02)
+        elif arrange == "pad" and pos == 0:
+            for st in tri:
+                put(tone(hz(st, 0), beat * bpb, 0.10, "flute"), t)
+        elif arrange == "waltz" and pos in (2, 4):
+            for st in tri:
+                put(tone(hz(st, 0), 0.4, 0.07, "box"), t)
+        elif arrange == "march" and pos % 2 == 0:
+            put(tone(hz(tri[(pos // 2) % 3], -1), 0.35, 0.22, "marimba"), t)
+        if perc:
+            if pos % 4 == 0:
+                kick(t)
+            if pos % 2 == 1:
+                shaker(t)
+        # اللحن
+        if mel == "arp":
+            st = tri[step % 3] + (12 if (step // 3) % 2 else 0)
+            put(tone(hz(st, 1), 1.0, 0.20), t)
+        elif mel == "step":
+            if rnd.random() < 0.8:
+                pent_i = min(7, max(0, pent_i + rnd.choice((-2, -1, -1, 0, 1, 1, 2))))
+                put(tone(hz(_PENT[pent_i], 1), 1.0, 0.26), t)
+        else:
+            if rnd.random() < 0.75:
+                put(tone(hz(rnd.choice(_PENT[1:6]), 1), 1.2, 0.26), t)
     buf /= max(0.01, np.abs(buf).max())
     fade = int(sr * 1.0)
     buf[:fade] *= np.linspace(0, 1, fade)
@@ -1335,6 +1410,24 @@ def make_music(path, seconds=48, seed=7):
     return path
 
 
+def _nudge_banner(w):
+    """شريط «اشترك 🔔» صغير يظهر في زاوية الشاشة أثناء الفيديو."""
+    h = int(w * 0.30)
+    im = Image.new("RGBA", (w + 16, h + 16), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([8 + 3, 8 + 6, 8 + w + 3, 8 + h + 6], radius=h // 2, fill=(0, 0, 0, 70))
+    d.rounded_rectangle([8, 8, 8 + w, 8 + h], radius=h // 2, fill=(222, 32, 40), outline=(255, 255, 255), width=4)
+    f = fit_font(FONT_AR, "اشترك بالقناة", w * 0.52, h * 0.5, h * 0.55, d, True)
+    t = ar_text("اشترك بالقناة")
+    bb = d.textbbox((0, 0), t, font=f)
+    d.text((8 + w * 0.60 - (bb[2] - bb[0]) / 2 - bb[0], 8 + (h - (bb[3] - bb[1])) / 2 - bb[1]), t, font=f,
+           fill=(255, 255, 255))
+    bell = emoji_img("🔔", h * 0.62)
+    if bell:
+        im.alpha_composite(bell, (int(8 + w * 0.07), int(8 + (h - bell.height) / 2)))
+    return im
+
+
 def finalize(clips, out, with_music=True):
     """يدمج المقاطع ثم يضيف موسيقى خفيفة تحت الصوت."""
     lst = OUT / (Path(out).stem + "_list.txt")
@@ -1345,15 +1438,42 @@ def finalize(clips, out, with_music=True):
         os.replace(raw, out)
         return out
     try:
-        mus = OUT / "music.wav"
+        style = int(MUSIC_STYLE) % len(MUSIC_STYLES)
+        mus = OUT / f"music_{style}.wav"
         if not mus.exists():
-            make_music(mus)
-        sh(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-stream_loop", "-1", "-i", str(mus),
+            make_music(mus, style=style)
+        print(f"[music] الأسلوب: {MUSIC_NAMES[style]}")
+        # شريط اشتراك صغير مرتين خلال الفيديو (إن كان الفيديو طويلاً)
+        total = duration(raw)
+        extra, fc_v, vmap = [], "", "0:v"
+        if total > 90:
+            probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                    "stream=width,height", "-of", "csv=p=0", str(raw)], capture_output=True,
+                                   text=True).stdout.strip().split(",")
+            vw, vh = int(probe[0]), int(probe[1])
+            bw = int(vw * (0.21 if vw > vh else 0.42))
+            ban = OUT / "nudge.png"
+            _nudge_banner(bw).save(ban)
+            ys = int(vh * (0.04 if vw > vh else 0.075))
+            xs = vw - bw - int(vw * 0.02) - 16
+            wins = [(total * 0.18, total * 0.18 + 6), (total * 0.55, total * 0.55 + 6)]
+            en = "+".join(f"between(t,{a:.2f},{b:.2f})" for a, b in wins)
+            extra = ["-loop", "1", "-i", str(ban)]
+            fc_v = f"[0:v][2:v]overlay=x={xs}:y={ys}+6*sin(t*5):enable='{en}':shortest=1[vv];"
+            vmap = "[vv]"
+        cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-stream_loop", "-1", "-i", str(mus)] + extra + [
             "-filter_complex",
-            "[1:a]volume=0.11,aformat=sample_rates=44100:channel_layouts=stereo[m];"
+            fc_v + "[1:a]volume=0.11,aformat=sample_rates=44100:channel_layouts=stereo[m];"
             "[0:a]aformat=sample_rates=44100:channel_layouts=stereo[v];"
             "[v][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]",
-            "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest", str(out)])
+            "-map", vmap, "-map", "[a]"]
+        if extra:
+            cmd += ["-c:v", "libx264", "-preset", os.getenv("X264_PRESET", "veryfast"), "-crf", "19",
+                    "-pix_fmt", "yuv420p"]
+        else:
+            cmd += ["-c:v", "copy"]
+        cmd += ["-c:a", "aac", "-b:a", "160k", "-shortest", str(out)]
+        sh(cmd)
     except Exception as e:  # noqa
         print(f"[music] تخطي الموسيقى: {str(e)[:200]}")
         os.replace(raw, out)

@@ -476,6 +476,7 @@ def main():
     long_url, uploaded = None, False
 
     if want_long:
+        render.MUSIC_STYLE = day
         video, chapters, total = build_video(long_plan, (1920, 1080), "long", images)
         title, desc, tags = make_seo(L, "long", chapters, None, day)
         print("العنوان:", title)
@@ -486,6 +487,7 @@ def main():
             vid = upload(video, title, desc, tags, thumb=thumb_for(L, day))
             long_url, uploaded = f"https://youtu.be/{vid}", True
     if want_short:
+        render.MUSIC_STYLE = day + 4
         video, _, total = build_video(short_plan, (1080, 1920), "short", images)
         title, desc, tags = make_seo(L, "short", None, long_url, day)
         print("العنوان:", title)
