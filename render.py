@@ -1064,10 +1064,14 @@ def render_scene(ctx, scene, idx, progress):
         return render_quiz(ctx, scene, idx, progress)
 
     # ---------- الصوت
-    parts = [("sil", 0.45), ("say", scene.get("ar_tts") or scene["ar"], "ar", "ar"), ("sil", 0.35),
-             ("say", scene.get("en_tts") or scene["en"], "en", "en"), ("sil", scene.get("tail", 0.7))]
+    if scene.get("no_en"):
+        parts = [("sil", 0.25), ("say", scene.get("ar_tts") or scene["ar"], "ar", "ar"), ("sil", scene.get("tail", 0.3))]
+    else:
+        parts = [("sil", 0.45), ("say", scene.get("ar_tts") or scene["ar"], "ar", "ar"), ("sil", 0.35),
+                 ("say", scene.get("en_tts") or scene["en"], "en", "en"), ("sil", scene.get("tail", 0.7))]
     audio, dur, marks = compose_audio(parts, pre + "_a")
-    t_ar, t_en = marks["ar"], marks["en"]
+    t_ar = marks["ar"]
+    t_en = marks.get("en") or (t_ar[1], t_ar[1] + 0.1)
 
     gbg = save_png(make_gradient_bg(geo, pal), pre + "_bg.png")
     bub = save_png(make_bubbles(geo, idx * 13 + 5), pre + "_bub.png")

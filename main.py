@@ -230,7 +230,13 @@ def plan_long(L, day):
         sc["sec"] = sec
         plan.append(sc)
 
-    plan.append({"kind": "intro", "sec": "المقدمة"})
+    q0 = (L.get("quiz") or [None])[0]
+    if q0 and q0.get("ar"):
+        plan.append({"kind": "title", "emoji": "🤔", "sec": "المقدمة", "no_en": True, "tail": 0.25, "en": "",
+                     "ar": "هل تعرفون؟ " + q0["ar"], "ar_tts": "هَلْ تَعْرِفُونَ؟ " + (q0.get("ar_tts") or q0["ar"])})
+        plan.append({"kind": "intro", "sec": None})
+    else:
+        plan.append({"kind": "intro", "sec": "المقدمة"})
     add(None, kind="title", emoji="👋",
         ar=f"مرحباً يا أصدقاء! درسنا اليوم: {L['title_ar']}",
         ar_tts=f"مَرْحَبًا يَا أَصْدِقَاءُ! دَرْسُنَا اليَوْمَ: {L.get('title_ar_tts') or L['title_ar']}",
