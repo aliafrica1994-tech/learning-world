@@ -38,17 +38,11 @@
   "قصة النملة المجتهدة",
   "لعبة التحدي: العدّ والأنماط 2",
   "ألغاز الذكاء: من أنا؟ 2",
-  "حرف التاء"
+  "حرف التاء",
+  "الرقم ثلاثة"
  ],
- "day": 21,
+ "day": 22,
  "archive": [
-  {
-   "day": 12,
-   "name": "long_day12.mp4",
-   "title_ar": "حيوانات المزرعة وما تعطينا",
-   "title_en": "Farm Animals and What They Give Us",
-   "dur": 318
-  },
   {
    "day": 13,
    "name": "long_day13.mp4",
@@ -104,6 +98,13 @@
    "title_ar": "حرف التاء",
    "title_en": "Arabic Letter Ta",
    "dur": 254
+  },
+  {
+   "day": 21,
+   "name": "long_day21.mp4",
+   "title_ar": "الرقم ثلاثة",
+   "title_en": "Number 3 - Three",
+   "dur": 213
   }
  ]
 }
