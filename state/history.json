@@ -39,17 +39,11 @@
   "لعبة التحدي: العدّ والأنماط 2",
   "ألغاز الذكاء: من أنا؟ 2",
   "حرف التاء",
-  "الرقم ثلاثة"
+  "الرقم ثلاثة",
+  "حيوانات الغابة والصحراء"
  ],
- "day": 22,
+ "day": 23,
  "archive": [
-  {
-   "day": 13,
-   "name": "long_day13.mp4",
-   "title_ar": "الحرف الإنجليزي بي",
-   "title_en": "English Letter B",
-   "dur": 205
-  },
   {
    "day": 14,
    "name": "long_day14.mp4",
@@ -105,6 +99,13 @@
    "title_ar": "الرقم ثلاثة",
    "title_en": "Number 3 - Three",
    "dur": 213
+  },
+  {
+   "day": 22,
+   "name": "long_day22.mp4",
+   "title_ar": "حيوانات الغابة والصحراء",
+   "title_en": "Forest and Desert Animals",
+   "dur": 314
   }
  ]
 }
