@@ -40,17 +40,11 @@
   "ألغاز الذكاء: من أنا؟ 2",
   "حرف التاء",
   "الرقم ثلاثة",
-  "حيوانات الغابة والصحراء"
+  "حيوانات الغابة والصحراء",
+  "الحرف الإنجليزي سي"
  ],
- "day": 23,
+ "day": 24,
  "archive": [
-  {
-   "day": 14,
-   "name": "long_day14.mp4",
-   "title_ar": "الشمس المشرقة وسر طاقتها",
-   "title_en": "The Bright Sun and Its Energy Secret",
-   "dur": 331
-  },
   {
    "day": 15,
    "name": "long_day15.mp4",
@@ -106,6 +100,13 @@
    "title_ar": "حيوانات الغابة والصحراء",
    "title_en": "Forest and Desert Animals",
    "dur": 314
+  },
+  {
+   "day": 23,
+   "name": "long_day23.mp4",
+   "title_ar": "الحرف الإنجليزي سي",
+   "title_en": "English Letter C",
+   "dur": 207
   }
  ]
 }
