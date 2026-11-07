@@ -41,17 +41,11 @@
   "حرف التاء",
   "الرقم ثلاثة",
   "حيوانات الغابة والصحراء",
-  "الحرف الإنجليزي سي"
+  "الحرف الإنجليزي سي",
+  "نعدّ من واحد إلى خمسة"
  ],
- "day": 24,
+ "day": 25,
  "archive": [
-  {
-   "day": 15,
-   "name": "long_day15.mp4",
-   "title_ar": "قول شكراً: الكلمة السحرية",
-   "title_en": "Saying Thank You: The Magic Word",
-   "dur": 338
-  },
   {
    "day": 16,
    "name": "long_day16.mp4",
@@ -107,6 +101,13 @@
    "title_ar": "الحرف الإنجليزي سي",
    "title_en": "English Letter C",
    "dur": 207
+  },
+  {
+   "day": 24,
+   "name": "long_day24.mp4",
+   "title_ar": "نعدّ من واحد إلى خمسة",
+   "title_en": "Counting One to Five",
+   "dur": 355
   }
  ]
 }
