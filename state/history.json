@@ -42,17 +42,11 @@
   "الرقم ثلاثة",
   "حيوانات الغابة والصحراء",
   "الحرف الإنجليزي سي",
-  "نعدّ من واحد إلى خمسة"
+  "نعدّ من واحد إلى خمسة",
+  "التعاون سر النجاح"
  ],
- "day": 25,
+ "day": 26,
  "archive": [
-  {
-   "day": 16,
-   "name": "long_day16.mp4",
-   "title_ar": "خلط الألوان: كيف نصنع الأخضر والبرتقالي؟",
-   "title_en": "Mixing Colors: How Do We Make Green and Orange?",
-   "dur": 313
-  },
   {
    "day": 17,
    "name": "long_day17.mp4",
@@ -108,6 +102,13 @@
    "title_ar": "نعدّ من واحد إلى خمسة",
    "title_en": "Counting One to Five",
    "dur": 355
+  },
+  {
+   "day": 25,
+   "name": "long_day25.mp4",
+   "title_ar": "التعاون سر النجاح",
+   "title_en": "Cooperation: The Secret of Success",
+   "dur": 327
   }
  ]
 }
