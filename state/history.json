@@ -43,17 +43,11 @@
   "حيوانات الغابة والصحراء",
   "الحرف الإنجليزي سي",
   "نعدّ من واحد إلى خمسة",
-  "التعاون سر النجاح"
+  "التعاون سر النجاح",
+  "الألوان في الطبيعة"
  ],
- "day": 26,
+ "day": 27,
  "archive": [
-  {
-   "day": 17,
-   "name": "long_day17.mp4",
-   "title_ar": "قصة النملة المجتهدة",
-   "title_en": "The Story of the Hardworking Ant",
-   "dur": 325
-  },
   {
    "day": 18,
    "name": "long_day18.mp4",
@@ -109,6 +103,13 @@
    "title_ar": "التعاون سر النجاح",
    "title_en": "Cooperation: The Secret of Success",
    "dur": 327
+  },
+  {
+   "day": 26,
+   "name": "long_day26.mp4",
+   "title_ar": "الألوان في الطبيعة",
+   "title_en": "Colors in Nature",
+   "dur": 304
   }
  ]
 }
