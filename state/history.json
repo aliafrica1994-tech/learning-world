@@ -44,17 +44,11 @@
   "الحرف الإنجليزي سي",
   "نعدّ من واحد إلى خمسة",
   "التعاون سر النجاح",
-  "الألوان في الطبيعة"
+  "الألوان في الطبيعة",
+  "نتعلم الأشكال"
  ],
- "day": 27,
+ "day": 28,
  "archive": [
-  {
-   "day": 18,
-   "name": "long_day18.mp4",
-   "title_ar": "لعبة التحدي: العدّ والأنماط 2",
-   "title_en": "Counting & Patterns Game 2",
-   "dur": 326
-  },
   {
    "day": 19,
    "name": "long_day19.mp4",
@@ -110,6 +104,13 @@
    "title_ar": "الألوان في الطبيعة",
    "title_en": "Colors in Nature",
    "dur": 304
+  },
+  {
+   "day": 27,
+   "name": "long_day27.mp4",
+   "title_ar": "نتعلم الأشكال",
+   "title_en": "Learning Shapes",
+   "dur": 334
   }
  ]
 }
