@@ -45,17 +45,11 @@
   "نعدّ من واحد إلى خمسة",
   "التعاون سر النجاح",
   "الألوان في الطبيعة",
-  "نتعلم الأشكال"
+  "نتعلم الأشكال",
+  "لعبة التحدي: العدّ والأنماط 3"
  ],
- "day": 28,
+ "day": 29,
  "archive": [
-  {
-   "day": 19,
-   "name": "long_day19.mp4",
-   "title_ar": "ألغاز الذكاء: من أنا؟ 2",
-   "title_en": "Riddle Challenge: Who Am I? 2",
-   "dur": 358
-  },
   {
    "day": 20,
    "name": "long_day20.mp4",
@@ -111,6 +105,13 @@
    "title_ar": "نتعلم الأشكال",
    "title_en": "Learning Shapes",
    "dur": 334
+  },
+  {
+   "day": 28,
+   "name": "long_day28.mp4",
+   "title_ar": "لعبة التحدي: العدّ والأنماط 3",
+   "title_en": "Counting & Patterns Game 3",
+   "dur": 328
   }
  ]
 }
