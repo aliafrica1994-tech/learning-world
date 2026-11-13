@@ -46,17 +46,11 @@
   "التعاون سر النجاح",
   "الألوان في الطبيعة",
   "نتعلم الأشكال",
-  "لعبة التحدي: العدّ والأنماط 3"
+  "لعبة التحدي: العدّ والأنماط 3",
+  "ألغاز الذكاء: من أنا؟ 3"
  ],
- "day": 29,
+ "day": 30,
  "archive": [
-  {
-   "day": 20,
-   "name": "long_day20.mp4",
-   "title_ar": "حرف التاء",
-   "title_en": "Arabic Letter Ta",
-   "dur": 254
-  },
   {
    "day": 21,
    "name": "long_day21.mp4",
@@ -112,6 +106,13 @@
    "title_ar": "لعبة التحدي: العدّ والأنماط 3",
    "title_en": "Counting & Patterns Game 3",
    "dur": 328
+  },
+  {
+   "day": 29,
+   "name": "long_day29.mp4",
+   "title_ar": "ألغاز الذكاء: من أنا؟ 3",
+   "title_en": "Riddle Challenge: Who Am I? 3",
+   "dur": 358
   }
  ]
 }
