@@ -47,17 +47,11 @@
   "الألوان في الطبيعة",
   "نتعلم الأشكال",
   "لعبة التحدي: العدّ والأنماط 3",
-  "ألغاز الذكاء: من أنا؟ 3"
+  "ألغاز الذكاء: من أنا؟ 3",
+  "حرف الثاء"
  ],
- "day": 30,
+ "day": 31,
  "archive": [
-  {
-   "day": 21,
-   "name": "long_day21.mp4",
-   "title_ar": "الرقم ثلاثة",
-   "title_en": "Number 3 - Three",
-   "dur": 213
-  },
   {
    "day": 22,
    "name": "long_day22.mp4",
@@ -113,6 +107,13 @@
    "title_ar": "ألغاز الذكاء: من أنا؟ 3",
    "title_en": "Riddle Challenge: Who Am I? 3",
    "dur": 358
+  },
+  {
+   "day": 30,
+   "name": "long_day30.mp4",
+   "title_ar": "حرف الثاء",
+   "title_en": "Arabic Letter Tha",
+   "dur": 253
   }
  ]
 }
