@@ -48,17 +48,11 @@
   "نتعلم الأشكال",
   "لعبة التحدي: العدّ والأنماط 3",
   "ألغاز الذكاء: من أنا؟ 3",
-  "حرف الثاء"
+  "حرف الثاء",
+  "الرقم أربعة"
  ],
- "day": 31,
+ "day": 32,
  "archive": [
-  {
-   "day": 22,
-   "name": "long_day22.mp4",
-   "title_ar": "حيوانات الغابة والصحراء",
-   "title_en": "Forest and Desert Animals",
-   "dur": 314
-  },
   {
    "day": 23,
    "name": "long_day23.mp4",
@@ -114,6 +108,13 @@
    "title_ar": "حرف الثاء",
    "title_en": "Arabic Letter Tha",
    "dur": 253
+  },
+  {
+   "day": 31,
+   "name": "long_day31.mp4",
+   "title_ar": "الرقم أربعة",
+   "title_en": "Number 4 - Four",
+   "dur": 214
   }
  ]
 }
