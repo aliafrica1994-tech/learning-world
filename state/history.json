@@ -49,17 +49,11 @@
   "لعبة التحدي: العدّ والأنماط 3",
   "ألغاز الذكاء: من أنا؟ 3",
   "حرف الثاء",
-  "الرقم أربعة"
+  "الرقم أربعة",
+  "عالم الفواكه اللذيذة"
  ],
- "day": 32,
+ "day": 33,
  "archive": [
-  {
-   "day": 23,
-   "name": "long_day23.mp4",
-   "title_ar": "الحرف الإنجليزي سي",
-   "title_en": "English Letter C",
-   "dur": 207
-  },
   {
    "day": 24,
    "name": "long_day24.mp4",
@@ -115,6 +109,13 @@
    "title_ar": "الرقم أربعة",
    "title_en": "Number 4 - Four",
    "dur": 214
+  },
+  {
+   "day": 32,
+   "name": "long_day32.mp4",
+   "title_ar": "عالم الفواكه اللذيذة",
+   "title_en": "The World of Delicious Fruits",
+   "dur": 316
   }
  ]
 }
