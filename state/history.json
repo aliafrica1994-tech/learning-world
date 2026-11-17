@@ -50,17 +50,11 @@
   "ألغاز الذكاء: من أنا؟ 3",
   "حرف الثاء",
   "الرقم أربعة",
-  "عالم الفواكه اللذيذة"
+  "عالم الفواكه اللذيذة",
+  "الحرف الإنجليزي دي"
  ],
- "day": 33,
+ "day": 34,
  "archive": [
-  {
-   "day": 24,
-   "name": "long_day24.mp4",
-   "title_ar": "نعدّ من واحد إلى خمسة",
-   "title_en": "Counting One to Five",
-   "dur": 355
-  },
   {
    "day": 25,
    "name": "long_day25.mp4",
@@ -116,6 +110,13 @@
    "title_ar": "عالم الفواكه اللذيذة",
    "title_en": "The World of Delicious Fruits",
    "dur": 316
+  },
+  {
+   "day": 33,
+   "name": "long_day33.mp4",
+   "title_ar": "الحرف الإنجليزي دي",
+   "title_en": "English Letter D",
+   "dur": 205
   }
  ]
 }
