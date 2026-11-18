@@ -51,17 +51,11 @@
   "حرف الثاء",
   "الرقم أربعة",
   "عالم الفواكه اللذيذة",
-  "الحرف الإنجليزي دي"
+  "الحرف الإنجليزي دي",
+  "أصوات الحيوانات"
  ],
- "day": 34,
+ "day": 35,
  "archive": [
-  {
-   "day": 25,
-   "name": "long_day25.mp4",
-   "title_ar": "التعاون سر النجاح",
-   "title_en": "Cooperation: The Secret of Success",
-   "dur": 327
-  },
   {
    "day": 26,
    "name": "long_day26.mp4",
@@ -117,6 +111,13 @@
    "title_ar": "الحرف الإنجليزي دي",
    "title_en": "English Letter D",
    "dur": 205
+  },
+  {
+   "day": 34,
+   "name": "long_day34.mp4",
+   "title_ar": "أصوات الحيوانات",
+   "title_en": "Animal Sounds",
+   "dur": 260
   }
  ]
 }
