@@ -52,17 +52,11 @@
   "الرقم أربعة",
   "عالم الفواكه اللذيذة",
   "الحرف الإنجليزي دي",
-  "أصوات الحيوانات"
+  "أصوات الحيوانات",
+  "نتعلم الأشكال"
  ],
- "day": 35,
+ "day": 36,
  "archive": [
-  {
-   "day": 26,
-   "name": "long_day26.mp4",
-   "title_ar": "الألوان في الطبيعة",
-   "title_en": "Colors in Nature",
-   "dur": 304
-  },
   {
    "day": 27,
    "name": "long_day27.mp4",
@@ -118,6 +112,13 @@
    "title_ar": "أصوات الحيوانات",
    "title_en": "Animal Sounds",
    "dur": 260
+  },
+  {
+   "day": 35,
+   "name": "long_day35.mp4",
+   "title_ar": "نتعلم الأشكال",
+   "title_en": "Learning Shapes",
+   "dur": 334
   }
  ]
 }
