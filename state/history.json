@@ -53,17 +53,11 @@
   "عالم الفواكه اللذيذة",
   "الحرف الإنجليزي دي",
   "أصوات الحيوانات",
-  "نتعلم الأشكال"
+  "نتعلم الأشكال",
+  "رحلة في عالم الأشكال"
  ],
- "day": 36,
+ "day": 37,
  "archive": [
-  {
-   "day": 27,
-   "name": "long_day27.mp4",
-   "title_ar": "نتعلم الأشكال",
-   "title_en": "Learning Shapes",
-   "dur": 334
-  },
   {
    "day": 28,
    "name": "long_day28.mp4",
@@ -119,6 +113,13 @@
    "title_ar": "نتعلم الأشكال",
    "title_en": "Learning Shapes",
    "dur": 334
+  },
+  {
+   "day": 36,
+   "name": "long_day36.mp4",
+   "title_ar": "رحلة في عالم الأشكال",
+   "title_en": "A Journey into the World of Shapes",
+   "dur": 314
   }
  ]
 }
