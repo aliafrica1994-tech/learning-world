@@ -54,17 +54,11 @@
   "الحرف الإنجليزي دي",
   "أصوات الحيوانات",
   "نتعلم الأشكال",
-  "رحلة في عالم الأشكال"
+  "رحلة في عالم الأشكال",
+  "نتعرف على الألوان"
  ],
- "day": 37,
+ "day": 38,
  "archive": [
-  {
-   "day": 28,
-   "name": "long_day28.mp4",
-   "title_ar": "لعبة التحدي: العدّ والأنماط 3",
-   "title_en": "Counting & Patterns Game 3",
-   "dur": 328
-  },
   {
    "day": 29,
    "name": "long_day29.mp4",
@@ -120,6 +114,13 @@
    "title_ar": "رحلة في عالم الأشكال",
    "title_en": "A Journey into the World of Shapes",
    "dur": 314
+  },
+  {
+   "day": 37,
+   "name": "long_day37.mp4",
+   "title_ar": "نتعرف على الألوان",
+   "title_en": "Let's Learn Colors",
+   "dur": 240
   }
  ]
 }
