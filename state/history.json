@@ -55,17 +55,11 @@
   "أصوات الحيوانات",
   "نتعلم الأشكال",
   "رحلة في عالم الأشكال",
-  "نتعرف على الألوان"
+  "نتعرف على الألوان",
+  "لعبة التحدي: العدّ والأنماط 4"
  ],
- "day": 38,
+ "day": 39,
  "archive": [
-  {
-   "day": 29,
-   "name": "long_day29.mp4",
-   "title_ar": "ألغاز الذكاء: من أنا؟ 3",
-   "title_en": "Riddle Challenge: Who Am I? 3",
-   "dur": 358
-  },
   {
    "day": 30,
    "name": "long_day30.mp4",
@@ -121,6 +115,13 @@
    "title_ar": "نتعرف على الألوان",
    "title_en": "Let's Learn Colors",
    "dur": 240
+  },
+  {
+   "day": 38,
+   "name": "long_day38.mp4",
+   "title_ar": "لعبة التحدي: العدّ والأنماط 4",
+   "title_en": "Counting & Patterns Game 4",
+   "dur": 326
   }
  ]
 }
