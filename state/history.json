@@ -56,17 +56,11 @@
   "نتعلم الأشكال",
   "رحلة في عالم الأشكال",
   "نتعرف على الألوان",
-  "لعبة التحدي: العدّ والأنماط 4"
+  "لعبة التحدي: العدّ والأنماط 4",
+  "ألغاز الذكاء: من أنا؟ 4"
  ],
- "day": 39,
+ "day": 40,
  "archive": [
-  {
-   "day": 30,
-   "name": "long_day30.mp4",
-   "title_ar": "حرف الثاء",
-   "title_en": "Arabic Letter Tha",
-   "dur": 253
-  },
   {
    "day": 31,
    "name": "long_day31.mp4",
@@ -122,6 +116,13 @@
    "title_ar": "لعبة التحدي: العدّ والأنماط 4",
    "title_en": "Counting & Patterns Game 4",
    "dur": 326
+  },
+  {
+   "day": 39,
+   "name": "long_day39.mp4",
+   "title_ar": "ألغاز الذكاء: من أنا؟ 4",
+   "title_en": "Riddle Challenge: Who Am I? 4",
+   "dur": 362
   }
  ]
 }
