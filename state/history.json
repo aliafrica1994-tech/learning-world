@@ -57,17 +57,11 @@
   "رحلة في عالم الأشكال",
   "نتعرف على الألوان",
   "لعبة التحدي: العدّ والأنماط 4",
-  "ألغاز الذكاء: من أنا؟ 4"
+  "ألغاز الذكاء: من أنا؟ 4",
+  "حرف الجيم"
  ],
- "day": 40,
+ "day": 41,
  "archive": [
-  {
-   "day": 31,
-   "name": "long_day31.mp4",
-   "title_ar": "الرقم أربعة",
-   "title_en": "Number 4 - Four",
-   "dur": 214
-  },
   {
    "day": 32,
    "name": "long_day32.mp4",
@@ -123,6 +117,13 @@
    "title_ar": "ألغاز الذكاء: من أنا؟ 4",
    "title_en": "Riddle Challenge: Who Am I? 4",
    "dur": 362
+  },
+  {
+   "day": 40,
+   "name": "long_day40.mp4",
+   "title_ar": "حرف الجيم",
+   "title_en": "Arabic Letter Jeem",
+   "dur": 255
   }
  ]
 }
