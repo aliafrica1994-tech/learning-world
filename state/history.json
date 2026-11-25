@@ -58,17 +58,11 @@
   "نتعرف على الألوان",
   "لعبة التحدي: العدّ والأنماط 4",
   "ألغاز الذكاء: من أنا؟ 4",
-  "حرف الجيم"
+  "حرف الجيم",
+  "الرقم خمسة"
  ],
- "day": 41,
+ "day": 42,
  "archive": [
-  {
-   "day": 32,
-   "name": "long_day32.mp4",
-   "title_ar": "عالم الفواكه اللذيذة",
-   "title_en": "The World of Delicious Fruits",
-   "dur": 316
-  },
   {
    "day": 33,
    "name": "long_day33.mp4",
@@ -124,6 +118,13 @@
    "title_ar": "حرف الجيم",
    "title_en": "Arabic Letter Jeem",
    "dur": 255
+  },
+  {
+   "day": 41,
+   "name": "long_day41.mp4",
+   "title_ar": "الرقم خمسة",
+   "title_en": "Number 5 - Five",
+   "dur": 215
   }
  ]
 }
