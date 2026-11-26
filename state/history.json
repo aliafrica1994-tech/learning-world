@@ -59,17 +59,11 @@
   "لعبة التحدي: العدّ والأنماط 4",
   "ألغاز الذكاء: من أنا؟ 4",
   "حرف الجيم",
-  "الرقم خمسة"
+  "الرقم خمسة",
+  "الخضروات اللذيذة وفوائدها"
  ],
- "day": 42,
+ "day": 43,
  "archive": [
-  {
-   "day": 33,
-   "name": "long_day33.mp4",
-   "title_ar": "الحرف الإنجليزي دي",
-   "title_en": "English Letter D",
-   "dur": 205
-  },
   {
    "day": 34,
    "name": "long_day34.mp4",
@@ -125,6 +119,13 @@
    "title_ar": "الرقم خمسة",
    "title_en": "Number 5 - Five",
    "dur": 215
+  },
+  {
+   "day": 42,
+   "name": "long_day42.mp4",
+   "title_ar": "الخضروات اللذيذة وفوائدها",
+   "title_en": "Delicious Vegetables and Their Benefits",
+   "dur": 327
   }
  ]
 }
