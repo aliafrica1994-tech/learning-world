@@ -60,17 +60,11 @@
   "ألغاز الذكاء: من أنا؟ 4",
   "حرف الجيم",
   "الرقم خمسة",
-  "الخضروات اللذيذة وفوائدها"
+  "الخضروات اللذيذة وفوائدها",
+  "الحرف الإنجليزي إي"
  ],
- "day": 43,
+ "day": 44,
  "archive": [
-  {
-   "day": 34,
-   "name": "long_day34.mp4",
-   "title_ar": "أصوات الحيوانات",
-   "title_en": "Animal Sounds",
-   "dur": 260
-  },
   {
    "day": 35,
    "name": "long_day35.mp4",
@@ -126,6 +120,13 @@
    "title_ar": "الخضروات اللذيذة وفوائدها",
    "title_en": "Delicious Vegetables and Their Benefits",
    "dur": 327
+  },
+  {
+   "day": 43,
+   "name": "long_day43.mp4",
+   "title_ar": "الحرف الإنجليزي إي",
+   "title_en": "English Letter E",
+   "dur": 204
   }
  ]
 }
